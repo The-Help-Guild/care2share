@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Mail, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Profile = () => {
   const { id } = useParams();
@@ -195,7 +196,8 @@ const Profile = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold text-primary">Profile</h1>
+          <h1 className="text-xl font-bold text-primary flex-1">Profile</h1>
+          <ThemeToggle />
         </div>
       </header>
 

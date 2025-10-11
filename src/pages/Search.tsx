@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Search as SearchIcon, Filter, Loader2 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Search = () => {
   const [searchParams] = useSearchParams();
@@ -190,9 +191,12 @@ const Search = () => {
     <div className="min-h-screen bg-background pb-20">
       <header className="bg-card border-b sticky top-0 z-10 shadow-soft">
         <div className="max-w-6xl mx-auto p-4">
-          <h1 className="text-2xl font-bold text-primary mb-4">
-            Search Community
-          </h1>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold text-primary">
+              Search Community
+            </h1>
+            <ThemeToggle />
+          </div>
           
           <div className="flex gap-2">
             <div className="flex-1 relative">

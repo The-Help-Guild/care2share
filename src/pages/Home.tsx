@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Search, TrendingUp, Users } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Home = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -97,9 +98,12 @@ const Home = () => {
     <div className="min-h-screen bg-background pb-20">
       <header className="bg-card border-b sticky top-0 z-10 shadow-soft">
         <div className="max-w-6xl mx-auto p-4">
-          <h1 className="text-2xl font-bold text-primary mb-4">
-            Welcome, {currentUser?.profile?.full_name?.split(" ")[0] || "Friend"}!
-          </h1>
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold text-primary">
+              Welcome, {currentUser?.profile?.full_name?.split(" ")[0] || "Friend"}!
+            </h1>
+            <ThemeToggle />
+          </div>
           
           <div className="flex gap-2">
             <div className="flex-1 relative">

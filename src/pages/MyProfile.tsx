@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const MyProfile = () => {
   const [profile, setProfile] = useState<any>(null);
@@ -66,8 +67,9 @@ const MyProfile = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="bg-card border-b">
-        <div className="max-w-4xl mx-auto p-4">
+        <div className="max-w-4xl mx-auto p-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-primary">My Profile</h1>
+          <ThemeToggle />
         </div>
       </header>
 

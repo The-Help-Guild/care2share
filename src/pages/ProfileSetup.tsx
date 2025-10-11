@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, Upload, X, CheckCircle } from "lucide-react";
 import { z } from "zod";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const profileSchema = z.object({
   bio: z.string().max(1000, { message: "Bio must be less than 1000 characters" }).optional(),
@@ -252,6 +253,9 @@ const ProfileSetup = () => {
 
   return (
     <div className="min-h-screen bg-background p-6">
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       <div className="max-w-2xl mx-auto animate-fade-in">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">

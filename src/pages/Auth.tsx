@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Mail, Lock, User, Loader2 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { z } from "zod";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const authSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email" }).max(255),
@@ -51,6 +52,10 @@ const Auth = () => {
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/home`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
       if (error) throw error;
@@ -128,7 +133,10 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-primary-light/20 to-secondary-light/20">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-primary-light/20 to-secondary-light/20 dark:from-primary/10 dark:to-secondary/10">
+      <div className="fixed top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
           <img src={logo} alt="Care2Share" className="h-20 w-20 mx-auto mb-4" />

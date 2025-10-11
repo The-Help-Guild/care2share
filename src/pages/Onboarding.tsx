@@ -6,6 +6,7 @@ import welcomeImg from "@/assets/onboarding-welcome.jpg";
 import shareImg from "@/assets/onboarding-share.jpg";
 import findImg from "@/assets/onboarding-find.jpg";
 import logo from "@/assets/logo.png";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const OnboardingScreen = ({ 
   image, 
@@ -73,8 +74,9 @@ const Onboarding = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <header className="p-6 flex justify-center">
+      <header className="p-6 flex justify-between items-center">
         <img src={logo} alt="Care2Share" className="h-16 w-16" />
+        <ThemeToggle />
       </header>
 
       <main className="flex-1 flex flex-col justify-between">
