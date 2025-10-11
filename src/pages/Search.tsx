@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Search as SearchIcon, Filter, Loader2 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { CATEGORIES } from "@/lib/constants";
 
 const searchInputSchema = z.object({
   query: z.string().max(200, "Search query too long (max 200 characters)"),
@@ -27,6 +28,7 @@ const Search = () => {
   const [results, setResults] = useState<any[]>([]);
   const [domains, setDomains] = useState<any[]>([]);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [locationFilter, setLocationFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -55,11 +57,11 @@ const Search = () => {
     const query = searchParams.get("q");
     if (query) {
       setSearchQuery(query);
-      performSearch(query, selectedDomains, locationFilter);
+      performSearch(query, selectedDomains, selectedCategories, locationFilter);
     }
   }, [searchParams]);
 
-  const performSearch = async (query: string, domainFilters: string[] = [], location: string = "") => {
+  const performSearch = async (query: string, domainFilters: string[] = [], categoryFilters: string[] = [], location: string = "") => {
     if (!query.trim()) {
       setResults([]);
       return;
@@ -164,6 +166,26 @@ const Search = () => {
         // Location match bonus
         if (location && profile.location?.toLowerCase().includes(locationLower)) score += 25;
         
+        // Category filtering - boost profiles matching selected categories
+        if (categoryFilters.length > 0) {
+          const allTags = [
+            ...(profile.expertise_tags || []).map((t: any) => t.tag.toLowerCase()),
+            ...(profile.hobby_tags || []).map((t: any) => t.tag.toLowerCase()),
+          ];
+          
+          const categoryMatches = categoryFilters.filter(cat => 
+            allTags.some(tag => 
+              tag.includes(cat.toLowerCase()) || cat.toLowerCase().includes(tag)
+            )
+          ).length;
+          
+          if (categoryMatches > 0) {
+            score += categoryMatches * 40; // High boost for category matches
+          } else {
+            score -= 30; // Reduce score if doesn't match any selected categories
+          }
+        }
+        
         return { ...profile, relevance_score: score };
       });
 
@@ -184,7 +206,7 @@ const Search = () => {
         // Validate search inputs
         searchInputSchema.parse({ query: searchQuery, location: locationFilter });
         navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-        performSearch(searchQuery, selectedDomains, locationFilter);
+        performSearch(searchQuery, selectedDomains, selectedCategories, locationFilter);
       } catch (error) {
         if (error instanceof z.ZodError) {
           toast.error(error.errors[0].message);
@@ -199,7 +221,16 @@ const Search = () => {
       : [...selectedDomains, domainId];
     
     setSelectedDomains(newFilters);
-    performSearch(searchQuery, newFilters, locationFilter);
+    performSearch(searchQuery, newFilters, selectedCategories, locationFilter);
+  };
+
+  const handleCategoryFilterChange = (category: string) => {
+    const newFilters = selectedCategories.includes(category)
+      ? selectedCategories.filter((c) => c !== category)
+      : [...selectedCategories, category];
+    
+    setSelectedCategories(newFilters);
+    performSearch(searchQuery, selectedDomains, newFilters, locationFilter);
   };
 
   const handleLocationFilterChange = (location: string) => {
@@ -210,7 +241,7 @@ const Search = () => {
       }
       setLocationFilter(location);
       if (searchQuery.trim()) {
-        performSearch(searchQuery, selectedDomains, location);
+        performSearch(searchQuery, selectedDomains, selectedCategories, location);
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -309,12 +340,34 @@ const Search = () => {
                       ))}
                     </div>
                   </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">
+                      Categories
+                    </Label>
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                      {CATEGORIES.map((category) => (
+                        <div key={category} className="flex items-center space-x-3">
+                          <Checkbox
+                            id={`category-${category}`}
+                            checked={selectedCategories.includes(category)}
+                            onCheckedChange={() => handleCategoryFilterChange(category)}
+                          />
+                          <Label htmlFor={`category-${category}`} className="cursor-pointer flex-1">
+                            {category}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
           </div>
 
-          {(selectedDomains.length > 0 || locationFilter) && (
+          {(selectedDomains.length > 0 || selectedCategories.length > 0 || locationFilter) && (
             <div className="mt-3 flex flex-wrap gap-2">
               {locationFilter && (
                 <Badge variant="default">
@@ -329,6 +382,11 @@ const Search = () => {
                   </Badge>
                 );
               })}
+              {selectedCategories.map((category) => (
+                <Badge key={category} variant="outline">
+                  🏷️ {category}
+                </Badge>
+              ))}
             </div>
           )}
         </div>

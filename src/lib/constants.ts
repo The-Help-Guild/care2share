@@ -1,0 +1,30 @@
+export const CATEGORIES = [
+  "Technical Support",
+  "Collaboration",
+  "Advice",
+  "Resources",
+  "Networking",
+  "Mentorship",
+  "Job Opportunities",
+  "Volunteering",
+  "Events & Meetups",
+  "Skills Exchange",
+  "Mental Health Support",
+  "Community Projects",
+  "Learning Resources",
+  "Career Guidance",
+  "Feedback & Reviews",
+  "Housing & Accommodation",
+  "Transportation",
+  "Legal Advice",
+  "Financial Support",
+  "Health & Wellness",
+  "Childcare",
+  "Pet Care",
+  "Language Exchange",
+  "Creative Projects",
+  "Business Development",
+  "Other"
+] as const;
+
+export type Category = typeof CATEGORIES[number];

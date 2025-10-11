@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { z } from "zod";
+import { CATEGORIES } from "@/lib/constants";
 
 const requestSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters").max(200, "Title too long"),
@@ -54,35 +55,6 @@ interface Reply {
     profile_photo_url: string | null;
   };
 }
-
-const CATEGORIES = [
-  "Technical Support",
-  "Collaboration",
-  "Advice",
-  "Resources",
-  "Networking",
-  "Mentorship",
-  "Job Opportunities",
-  "Volunteering",
-  "Events & Meetups",
-  "Skills Exchange",
-  "Mental Health Support",
-  "Community Projects",
-  "Learning Resources",
-  "Career Guidance",
-  "Feedback & Reviews",
-  "Housing & Accommodation",
-  "Transportation",
-  "Legal Advice",
-  "Financial Support",
-  "Health & Wellness",
-  "Childcare",
-  "Pet Care",
-  "Language Exchange",
-  "Creative Projects",
-  "Business Development",
-  "Other"
-];
 
 const SupportRequests = () => {
   const navigate = useNavigate();
