@@ -12,11 +12,11 @@ const Index = () => {
       
       if (session) {
         // Check if profile exists
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("id", session.user.id)
-          .single();
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", session.user.id)
+        .maybeSingle();
         
         if (profile) {
           navigate("/home");

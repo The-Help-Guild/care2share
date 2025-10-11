@@ -8,9 +8,13 @@ import { Loader2, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ProfileCompleteness } from "@/components/ProfileCompleteness";
 
 const MyProfile = () => {
   const [profile, setProfile] = useState<any>(null);
+  const [domains, setDomains] = useState<any[]>([]);
+  const [expertiseTags, setExpertiseTags] = useState<any[]>([]);
+  const [hobbyTags, setHobbyTags] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -30,6 +34,32 @@ const MyProfile = () => {
 
       if (profile) {
         setProfile(profile);
+        
+        // Load domains
+        const { data: profileDomains } = await supabase
+          .from("profile_domains")
+          .select("domains(*)")
+          .eq("profile_id", profile.id);
+        
+        if (profileDomains) {
+          setDomains(profileDomains.map((pd: any) => pd.domains));
+        }
+
+        // Load expertise tags
+        const { data: expertise } = await supabase
+          .from("expertise_tags")
+          .select("*")
+          .eq("profile_id", profile.id);
+        
+        if (expertise) setExpertiseTags(expertise);
+
+        // Load hobby tags
+        const { data: hobbies } = await supabase
+          .from("hobby_tags")
+          .select("*")
+          .eq("profile_id", profile.id);
+        
+        if (hobbies) setHobbyTags(hobbies);
       }
       setLoading(false);
     };
@@ -76,6 +106,13 @@ const MyProfile = () => {
       <main className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 animate-fade-in">
         {profile && (
           <>
+            <ProfileCompleteness 
+              profile={profile}
+              domains={domains}
+              expertiseTags={expertiseTags}
+              hobbyTags={hobbyTags}
+            />
+            
             <Card>
               <CardContent className="pt-6">
                 <div className="flex flex-col items-center text-center gap-4">
