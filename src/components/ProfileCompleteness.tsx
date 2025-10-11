@@ -27,7 +27,7 @@ export const ProfileCompleteness = ({
     { label: "Bio", completed: !!profile?.bio && profile.bio.length > 20 },
     { label: "Location", completed: !!profile?.location },
     { label: "Expertise Domains", completed: domains.length > 0 },
-    { label: "Expertise Tags", completed: expertiseTags.length >= 3 },
+    { label: "Expertise Tags", completed: expertiseTags.length >= 2 },
     { label: "Hobbies", completed: hobbyTags.length >= 2 },
     { label: "Resume (Optional)", completed: !!profile?.resume_url },
   ];

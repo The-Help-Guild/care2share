@@ -6,15 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, TrendingUp, Users } from "lucide-react";
+import { Search, TrendingUp, Users, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { formatDistanceToNow } from "date-fns";
 
 const Home = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [recentProfiles, setRecentProfiles] = useState<any[]>([]);
+  const [supportRequests, setSupportRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -62,8 +64,28 @@ const Home = () => {
       setLoading(false);
     };
 
+    const loadSupportRequests = async () => {
+      const { data } = await supabase
+        .from("support_requests")
+        .select(`
+          id,
+          title,
+          category,
+          status,
+          created_at,
+          user_id,
+          profiles!support_requests_user_id_fkey(full_name, profile_photo_url)
+        `)
+        .eq("status", "open")
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (data) setSupportRequests(data);
+    };
+
     checkAuth();
     loadRecentProfiles();
+    loadSupportRequests();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
@@ -190,6 +212,52 @@ const Home = () => {
               </CardContent>
             </Card>
           )}
+        </section>
+
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <MessageSquare className="h-5 w-5 text-accent" />
+            <h2 className="text-xl font-semibold">Recent Support Requests</h2>
+          </div>
+          
+          <div className="space-y-3">
+            {supportRequests.map((request) => (
+              <Card
+                key={request.id}
+                className="cursor-pointer hover-lift"
+                onClick={() => navigate('/support')}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base mb-1">{request.title}</CardTitle>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Badge variant="outline" className="text-xs">
+                          {request.category}
+                        </Badge>
+                        <span>•</span>
+                        <span>{formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}</span>
+                      </div>
+                    </div>
+                    <Avatar className="h-8 w-8 shrink-0">
+                      <AvatarImage src={request.profiles?.profile_photo_url} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                        {getInitials(request.profiles?.full_name || "?")}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))}
+            {supportRequests.length === 0 && (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <MessageSquare className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground">No support requests yet</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </section>
 
         <section>
