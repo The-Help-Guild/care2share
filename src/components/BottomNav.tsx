@@ -1,17 +1,24 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Search, MessageCircle, User } from "lucide-react";
+import { Home, Search, MessageCircle, User, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAdmin } from "@/hooks/useAdmin";
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdmin } = useAdmin();
 
-  const navItems = [
+  const baseNavItems = [
     { icon: Home, label: "Home", path: "/home" },
     { icon: Search, label: "Search", path: "/search" },
     { icon: MessageCircle, label: "Messages", path: "/messages" },
     { icon: User, label: "Profile", path: "/my-profile" },
   ];
+
+  // Add admin item only for admins
+  const navItems = isAdmin 
+    ? [...baseNavItems, { icon: Shield, label: "Admin", path: "/admin" }]
+    : baseNavItems;
 
   const isActive = (path: string) => {
     return location.pathname === path;
