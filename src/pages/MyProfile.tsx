@@ -175,6 +175,13 @@ const MyProfile = () => {
               </Button>
               <Button
                 variant="outline"
+                className="w-full justify-start"
+                onClick={() => navigate('/edit-profile')}
+              >
+                Edit Profile
+              </Button>
+              <Button
+                variant="outline"
                 className="w-full justify-start text-destructive hover:text-destructive"
                 onClick={handleLogout}
               >
