@@ -7,8 +7,9 @@ import shareImg from "@/assets/onboarding-share.jpg";
 import findImg from "@/assets/onboarding-find.jpg";
 import logo from "@/assets/logo.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Footer } from "@/components/Footer";
 
-const OnboardingScreen = ({ 
+const OnboardingScreen = ({
   image, 
   title, 
   subtitle, 
@@ -133,6 +134,8 @@ const Onboarding = () => {
           )}
         </div>
       </main>
+      
+      <Footer />
     </div>
   );
 };

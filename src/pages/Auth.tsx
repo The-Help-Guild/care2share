@@ -10,6 +10,7 @@ import logo from "@/assets/logo.png";
 import { z } from "zod";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Footer } from "@/components/Footer";
 
 const authSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email" }).max(255),
@@ -141,10 +142,11 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-primary-light/20 to-secondary-light/20 dark:from-primary/10 dark:to-secondary/10">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-primary-light/20 to-secondary-light/20 dark:from-primary/10 dark:to-secondary/10">
       <div className="fixed top-4 right-4">
         <ThemeToggle />
       </div>
+      <div className="flex-1 flex items-center justify-center p-6">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
           <img src={logo} alt="Care2Share" className="h-20 w-20 mx-auto mb-4" />
@@ -223,11 +225,11 @@ const Auth = () => {
                 />
                 <Label htmlFor="terms" className="text-xs leading-relaxed cursor-pointer">
                   I accept the{" "}
-                  <a href="#" className="text-primary hover:underline">
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     Terms of Service
                   </a>{" "}
                   and{" "}
-                  <a href="#" className="text-primary hover:underline">
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     Privacy Policy
                   </a>
                   . I understand my data will be processed in accordance with GDPR regulations.
@@ -292,6 +294,9 @@ const Auth = () => {
           </div>
         </div>
       </div>
+      </div>
+      
+      <Footer />
     </div>
   );
 };
