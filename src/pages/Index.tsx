@@ -11,12 +11,19 @@ const Index = () => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session) {
+        try {
+          // Attempt to bootstrap admin for the first signed-in user
+          await supabase.rpc('bootstrap_admin', { _user_id: session.user.id });
+        } catch (e) {
+          console.error('Error bootstrapping admin role:', e);
+        }
+
         // Check if profile exists
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("id", session.user.id)
-        .maybeSingle();
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("id", session.user.id)
+          .maybeSingle();
         
         if (profile) {
           navigate("/home");
