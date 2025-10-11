@@ -10,6 +10,13 @@ import { MessageCircle, Send, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { z } from "zod";
+
+const messageSchema = z.object({
+  content: z.string()
+    .min(1, "Message cannot be empty")
+    .max(5000, "Message too long (max 5000 characters)")
+});
 
 interface Conversation {
   id: string;
@@ -207,12 +214,15 @@ const Messages = () => {
     try {
       setSending(true);
       
+      // Validate message content
+      const validated = messageSchema.parse({ content: newMessage.trim() });
+      
       const { error } = await supabase
         .from("messages")
         .insert({
           conversation_id: selectedConversation,
           sender_id: currentUserId,
-          content: newMessage.trim()
+          content: validated.content
         });
 
       if (error) throw error;
@@ -226,8 +236,12 @@ const Messages = () => {
       setNewMessage("");
       loadConversations();
     } catch (error) {
-      console.error("Error sending message:", error);
-      toast.error("Failed to send message");
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        console.error("Error sending message:", error);
+        toast.error("Failed to send message");
+      }
     } finally {
       setSending(false);
     }
