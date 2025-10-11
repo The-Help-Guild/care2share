@@ -31,6 +31,7 @@ const ProfileSetup = () => {
 
   // Step 3: Bio & Tags
   const [bio, setBio] = useState("");
+  const [location, setLocation] = useState("");
   const [expertiseInput, setExpertiseInput] = useState("");
   const [expertiseTags, setExpertiseTags] = useState<string[]>([]);
   const [hobbyInput, setHobbyInput] = useState("");
@@ -193,6 +194,7 @@ const ProfileSetup = () => {
           full_name: user.user_metadata.full_name || user.email?.split("@")[0] || "",
           email: user.email!,
           bio: bio || null,
+          location: location || null,
           profile_photo_url: photoUrl || null,
           resume_url: resumeUrl || null,
         });
@@ -386,6 +388,16 @@ const ProfileSetup = () => {
                   <p className="text-xs text-muted-foreground mt-1">
                     {bio.length}/1000 characters
                   </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="e.g., San Francisco, CA"
+                  />
                 </div>
 
                 <div>

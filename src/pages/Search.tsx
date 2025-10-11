@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Search as SearchIcon, Filter, Loader2 } from "lucide-react";
@@ -18,6 +19,7 @@ const Search = () => {
   const [results, setResults] = useState<any[]>([]);
   const [domains, setDomains] = useState<any[]>([]);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
+  const [locationFilter, setLocationFilter] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -45,11 +47,11 @@ const Search = () => {
     const query = searchParams.get("q");
     if (query) {
       setSearchQuery(query);
-      performSearch(query, selectedDomains);
+      performSearch(query, selectedDomains, locationFilter);
     }
   }, [searchParams]);
 
-  const performSearch = async (query: string, domainFilters: string[] = []) => {
+  const performSearch = async (query: string, domainFilters: string[] = [], location: string = "") => {
     if (!query.trim()) {
       setResults([]);
       return;
@@ -79,11 +81,20 @@ const Search = () => {
 
       if (error) throw error;
 
-      // Filter results based on search query
+      // Filter results based on search query and location
       const searchLower = query.toLowerCase();
+      const locationLower = location.toLowerCase();
+      
       const filtered = data?.filter((profile) => {
+        // Location filter
+        if (locationLower && !profile.location?.toLowerCase().includes(locationLower)) {
+          return false;
+        }
+
+        // Search query matches
         const nameMatch = profile.full_name.toLowerCase().includes(searchLower);
         const bioMatch = profile.bio?.toLowerCase().includes(searchLower);
+        const locationMatch = profile.location?.toLowerCase().includes(searchLower);
         const expertiseMatch = profile.expertise_tags?.some((e: any) =>
           e.tag.toLowerCase().includes(searchLower)
         );
@@ -94,10 +105,48 @@ const Search = () => {
           pd.domains.name.toLowerCase().includes(searchLower)
         );
 
-        return nameMatch || bioMatch || expertiseMatch || hobbyMatch || domainMatch;
+        return nameMatch || bioMatch || locationMatch || expertiseMatch || hobbyMatch || domainMatch;
       }) || [];
 
-      setResults(filtered);
+      // Advanced matching: Score results by relevance
+      const scored = filtered.map(profile => {
+        let score = 0;
+        
+        // Exact name match gets highest score
+        if (profile.full_name.toLowerCase() === searchLower) score += 100;
+        else if (profile.full_name.toLowerCase().includes(searchLower)) score += 50;
+        
+        // Expertise matches (important)
+        const expertiseMatches = profile.expertise_tags?.filter((e: any) =>
+          e.tag.toLowerCase().includes(searchLower)
+        ).length || 0;
+        score += expertiseMatches * 30;
+        
+        // Domain matches
+        const domainMatches = profile.profile_domains?.filter((pd: any) =>
+          pd.domains.name.toLowerCase().includes(searchLower)
+        ).length || 0;
+        score += domainMatches * 20;
+        
+        // Hobby matches (lower priority)
+        const hobbyMatches = profile.hobby_tags?.filter((h: any) =>
+          h.tag.toLowerCase().includes(searchLower)
+        ).length || 0;
+        score += hobbyMatches * 10;
+        
+        // Bio matches
+        if (profile.bio?.toLowerCase().includes(searchLower)) score += 15;
+        
+        // Location match bonus
+        if (location && profile.location?.toLowerCase().includes(locationLower)) score += 25;
+        
+        return { ...profile, relevance_score: score };
+      });
+
+      // Sort by relevance score
+      const sorted = scored.sort((a, b) => b.relevance_score - a.relevance_score);
+
+      setResults(sorted);
     } catch (error: any) {
       console.error("Search error:", error);
     } finally {
@@ -108,7 +157,7 @@ const Search = () => {
   const handleSearch = () => {
     if (searchQuery.trim()) {
       navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-      performSearch(searchQuery, selectedDomains);
+      performSearch(searchQuery, selectedDomains, locationFilter);
     }
   };
 
@@ -118,7 +167,14 @@ const Search = () => {
       : [...selectedDomains, domainId];
     
     setSelectedDomains(newFilters);
-    performSearch(searchQuery, newFilters);
+    performSearch(searchQuery, newFilters, locationFilter);
+  };
+
+  const handleLocationFilterChange = (location: string) => {
+    setLocationFilter(location);
+    if (searchQuery.trim()) {
+      performSearch(searchQuery, selectedDomains, location);
+    }
   };
 
   const getInitials = (name: string) => {
@@ -160,28 +216,65 @@ const Search = () => {
               </SheetTrigger>
               <SheetContent>
                 <SheetHeader>
-                  <SheetTitle>Filter by Domain</SheetTitle>
+                  <SheetTitle>Filters</SheetTitle>
                 </SheetHeader>
-                <div className="mt-6 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
-                  {domains.map((domain) => (
-                    <div key={domain.id} className="flex items-center space-x-3">
-                      <Checkbox
-                        id={domain.id}
-                        checked={selectedDomains.includes(domain.id)}
-                        onCheckedChange={() => handleFilterChange(domain.id)}
-                      />
-                      <Label htmlFor={domain.id} className="cursor-pointer flex-1">
-                        {domain.name}
-                      </Label>
+                <div className="mt-6 space-y-6">
+                  <div>
+                    <Label htmlFor="location-filter" className="text-base font-semibold mb-3 block">
+                      Location
+                    </Label>
+                    <Input
+                      id="location-filter"
+                      value={locationFilter}
+                      onChange={(e) => handleLocationFilterChange(e.target.value)}
+                      placeholder="e.g., San Francisco, CA"
+                      className="mb-2"
+                    />
+                    {locationFilter && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleLocationFilterChange("")}
+                        className="text-xs"
+                      >
+                        Clear location
+                      </Button>
+                    )}
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div>
+                    <Label className="text-base font-semibold mb-3 block">
+                      Domains
+                    </Label>
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                      {domains.map((domain) => (
+                        <div key={domain.id} className="flex items-center space-x-3">
+                          <Checkbox
+                            id={domain.id}
+                            checked={selectedDomains.includes(domain.id)}
+                            onCheckedChange={() => handleFilterChange(domain.id)}
+                          />
+                          <Label htmlFor={domain.id} className="cursor-pointer flex-1">
+                            {domain.name}
+                          </Label>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>
           </div>
 
-          {selectedDomains.length > 0 && (
+          {(selectedDomains.length > 0 || locationFilter) && (
             <div className="mt-3 flex flex-wrap gap-2">
+              {locationFilter && (
+                <Badge variant="default">
+                  📍 {locationFilter}
+                </Badge>
+              )}
               {selectedDomains.map((domainId) => {
                 const domain = domains.find((d) => d.id === domainId);
                 return (
@@ -225,17 +318,22 @@ const Search = () => {
                         <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                           {profile.bio || "No bio available"}
                         </p>
-                        <div className="flex flex-wrap gap-2">
-                          {profile.profile_domains?.slice(0, 3).map((pd: any, i: number) => (
-                            <Badge key={i} variant="secondary">
-                              {pd.domains.name}
-                            </Badge>
-                          ))}
-                          {profile.expertise_tags?.slice(0, 3).map((et: any, i: number) => (
-                            <Badge key={`e-${i}`} variant="outline">
-                              {et.tag}
-                            </Badge>
-                          ))}
+                        <div className="space-y-2">
+                          {profile.location && (
+                            <p className="text-xs text-muted-foreground">📍 {profile.location}</p>
+                          )}
+                          <div className="flex flex-wrap gap-2">
+                            {profile.profile_domains?.slice(0, 3).map((pd: any, i: number) => (
+                              <Badge key={i} variant="secondary">
+                                {pd.domains.name}
+                              </Badge>
+                            ))}
+                            {profile.expertise_tags?.slice(0, 3).map((et: any, i: number) => (
+                              <Badge key={`e-${i}`} variant="outline">
+                                {et.tag}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       </div>
                       <Button variant="default">View Profile</Button>

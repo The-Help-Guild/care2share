@@ -78,8 +78,55 @@ const Profile = () => {
     loadProfile();
   }, [id, navigate]);
 
-  const handleContactClick = () => {
-    toast.info("Messaging feature coming soon!");
+  const handleContactClick = async () => {
+    if (!id || !currentUserId) return;
+
+    try {
+      // Check if conversation already exists between these users
+      const { data: existingConversations } = await supabase
+        .from("conversation_participants")
+        .select("conversation_id")
+        .eq("user_id", currentUserId);
+
+      if (existingConversations) {
+        for (const conv of existingConversations) {
+          const { data: otherParticipants } = await supabase
+            .from("conversation_participants")
+            .select("user_id")
+            .eq("conversation_id", conv.conversation_id)
+            .neq("user_id", currentUserId);
+
+          if (otherParticipants?.some(p => p.user_id === id)) {
+            navigate(`/messages?conversation=${conv.conversation_id}`);
+            return;
+          }
+        }
+      }
+
+      // Create new conversation
+      const { data: newConversation, error: convError } = await supabase
+        .from("conversations")
+        .insert({})
+        .select()
+        .single();
+
+      if (convError) throw convError;
+
+      // Add participants
+      const { error: participantsError } = await supabase
+        .from("conversation_participants")
+        .insert([
+          { conversation_id: newConversation.id, user_id: currentUserId },
+          { conversation_id: newConversation.id, user_id: id }
+        ]);
+
+      if (participantsError) throw participantsError;
+
+      navigate(`/messages?conversation=${newConversation.id}`);
+    } catch (error: any) {
+      toast.error("Failed to start conversation");
+      console.error(error);
+    }
   };
 
   const handleResumeDownload = async () => {
@@ -164,7 +211,11 @@ const Profile = () => {
               </Avatar>
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-2">{profile.full_name}</CardTitle>
-                <p className="text-muted-foreground mb-4">{profile.email}</p>
+                <p className="text-muted-foreground">{profile.email}</p>
+                {profile.location && (
+                  <p className="text-muted-foreground text-sm mt-1">📍 {profile.location}</p>
+                )}
+                <div className="mt-4">
                 {!isOwnProfile && (
                   <Button onClick={handleContactClick} className="gap-2">
                     <Mail className="h-4 w-4" />
@@ -176,6 +227,7 @@ const Profile = () => {
                     Edit Profile
                   </Button>
                 )}
+                </div>
               </div>
             </div>
           </CardHeader>
