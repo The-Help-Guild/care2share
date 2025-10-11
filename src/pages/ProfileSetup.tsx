@@ -198,6 +198,7 @@ const ProfileSetup = () => {
           location: location || null,
           profile_photo_url: photoUrl || null,
           resume_url: resumeUrl || null,
+          terms_accepted_at: user.user_metadata.terms_accepted_at || new Date().toISOString(),
         });
 
       if (profileError) throw profileError;

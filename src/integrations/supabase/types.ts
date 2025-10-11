@@ -241,6 +241,7 @@ export type Database = {
           longitude: number | null
           profile_photo_url: string | null
           resume_url: string | null
+          terms_accepted_at: string | null
           updated_at: string | null
         }
         Insert: {
@@ -254,6 +255,7 @@ export type Database = {
           longitude?: number | null
           profile_photo_url?: string | null
           resume_url?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -267,6 +269,7 @@ export type Database = {
           longitude?: number | null
           profile_photo_url?: string | null
           resume_url?: string | null
+          terms_accepted_at?: string | null
           updated_at?: string | null
         }
         Relationships: []

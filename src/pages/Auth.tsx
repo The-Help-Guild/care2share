@@ -9,11 +9,13 @@ import { Mail, Lock, User, Loader2 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { z } from "zod";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const authSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email" }).max(255),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
   fullName: z.string().min(2, { message: "Name must be at least 2 characters" }).max(100).optional(),
+  termsAccepted: z.boolean().optional(),
 });
 
 const Auth = () => {
@@ -24,6 +26,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -73,7 +76,7 @@ const Auth = () => {
       setLoading(true);
 
       const validationData = mode === "signup" 
-        ? { email, password, fullName }
+        ? { email, password, fullName, termsAccepted }
         : { email, password };
       
       const result = authSchema.safeParse(validationData);
@@ -85,6 +88,10 @@ const Auth = () => {
       }
 
       if (mode === "signup") {
+        if (!termsAccepted) {
+          toast.error("You must accept the Terms of Service and Privacy Policy");
+          return;
+        }
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -92,6 +99,7 @@ const Auth = () => {
             emailRedirectTo: `${window.location.origin}/profile-setup`,
             data: {
               full_name: fullName,
+              terms_accepted_at: new Date().toISOString(),
             },
           },
         });
@@ -204,6 +212,28 @@ const Auth = () => {
                 minLength={6}
               />
             </div>
+
+            {mode === "signup" && (
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  id="terms"
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                  required
+                />
+                <Label htmlFor="terms" className="text-xs leading-relaxed cursor-pointer">
+                  I accept the{" "}
+                  <a href="#" className="text-primary hover:underline">
+                    Terms of Service
+                  </a>{" "}
+                  and{" "}
+                  <a href="#" className="text-primary hover:underline">
+                    Privacy Policy
+                  </a>
+                  . I understand my data will be processed in accordance with GDPR regulations.
+                </Label>
+              </div>
+            )}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
