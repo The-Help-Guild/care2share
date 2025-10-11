@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { MessageCircle, Send, ArrowLeft, Loader2 } from "lucide-react";
+import { MessageCircle, Send, ArrowLeft, Loader2, Search as SearchIcon } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -52,6 +52,7 @@ const Messages = () => {
   const [sending, setSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -361,9 +362,20 @@ const Messages = () => {
         {!selectedConversation ? (
           <>
             <header className="bg-card border-b">
-              <div className="max-w-4xl mx-auto p-4 flex items-center justify-between">
-                <h1 className="text-2xl font-bold text-primary">Messages</h1>
-                <ThemeToggle />
+              <div className="max-w-4xl mx-auto p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h1 className="text-2xl font-bold text-primary">Messages</h1>
+                  <ThemeToggle />
+                </div>
+                <div className="relative">
+                  <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search conversations..."
+                    className="pl-10"
+                  />
+                </div>
               </div>
             </header>
 
@@ -380,7 +392,12 @@ const Messages = () => {
                 </Card>
               ) : (
                 <div className="space-y-2">
-                  {conversations.map((conv) => (
+                  {conversations
+                    .filter(conv => 
+                      conv.other_user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      conv.last_message?.content.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                    .map((conv) => (
                     <Card
                       key={conv.id}
                       className="cursor-pointer hover-lift"
@@ -519,18 +536,32 @@ const Messages = () => {
         <main className="max-w-7xl mx-auto p-4">
           <div className="grid grid-cols-3 gap-4 h-[calc(100vh-140px)]">
             {/* Conversations list */}
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border rounded-lg overflow-hidden flex flex-col">
               <div className="bg-muted p-3 border-b">
-                <h2 className="font-semibold">Conversations</h2>
+                <h2 className="font-semibold mb-3">Conversations</h2>
+                <div className="relative">
+                  <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search..."
+                    className="pl-10"
+                  />
+                </div>
               </div>
-              <div className="overflow-y-auto h-full">
+              <div className="overflow-y-auto flex-1">
                 {conversations.length === 0 ? (
                   <div className="p-6 text-center text-muted-foreground">
                     <MessageCircle className="h-8 w-8 mx-auto mb-2" />
                     <p className="text-sm">No conversations yet</p>
                   </div>
-                ) : (
-                  conversations.map((conv) => (
+            ) : (
+              conversations
+                .filter(conv => 
+                  conv.other_user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  conv.last_message?.content.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .map((conv) => (
                     <div
                       key={conv.id}
                       className={`p-4 cursor-pointer border-b hover:bg-accent transition-colors ${

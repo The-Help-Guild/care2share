@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Search, MessageCircle, User, Shield } from "lucide-react";
+import { Home, Search, MessageCircle, User, Shield, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAdmin } from "@/hooks/useAdmin";
 
@@ -11,6 +11,7 @@ const BottomNav = () => {
   const baseNavItems = [
     { icon: Home, label: "Home", path: "/home" },
     { icon: Search, label: "Search", path: "/search" },
+    { icon: HelpCircle, label: "Support", path: "/support" },
     { icon: MessageCircle, label: "Messages", path: "/messages" },
     { icon: User, label: "Profile", path: "/my-profile" },
   ];
