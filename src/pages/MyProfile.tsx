@@ -22,14 +22,14 @@ const MyProfile = () => {
         return;
       }
 
-      const { data } = await supabase
+      const { data: profile } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", session.user.id)
-        .single();
+        .maybeSingle();
 
-      if (data) {
-        setProfile(data);
+      if (profile) {
+        setProfile(profile);
       }
       setLoading(false);
     };

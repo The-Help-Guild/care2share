@@ -30,7 +30,7 @@ const Home = () => {
         .from("profiles")
         .select("*")
         .eq("id", session.user.id)
-        .single();
+        .maybeSingle();
 
       if (!profile) {
         navigate("/profile-setup");
@@ -41,7 +41,7 @@ const Home = () => {
     };
 
     const loadRecentProfiles = async () => {
-      // Only query non-sensitive fields for other users' profiles
+      // Use left join to include profiles even without domains
       const { data } = await supabase
         .from("profiles")
         .select(`

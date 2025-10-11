@@ -44,9 +44,16 @@ const Profile = () => {
           .from("profiles")
           .select(fieldsToSelect)
           .eq("id", id)
-          .single();
+          .maybeSingle();
 
         if (profileError) throw profileError;
+        
+        if (!profileData) {
+          toast.error("Profile not found");
+          navigate("/home");
+          return;
+        }
+        
         setProfile(profileData);
 
         const { data: domainsData } = await supabase
@@ -219,7 +226,9 @@ const Profile = () => {
               </Avatar>
               <div className="flex-1">
                 <CardTitle className="text-2xl mb-2">{profile.full_name}</CardTitle>
-                <p className="text-muted-foreground">{profile.email}</p>
+                {isOwnProfile && profile.email && (
+                  <p className="text-muted-foreground">{profile.email}</p>
+                )}
                 {profile.location && (
                   <p className="text-muted-foreground text-sm mt-1">📍 {profile.location}</p>
                 )}
@@ -305,7 +314,7 @@ const Profile = () => {
           </Card>
         )}
 
-        {profile.resume_url && (
+        {profile.resume_url && isOwnProfile && (
           <Card>
             <CardHeader>
               <CardTitle>Resume / Portfolio</CardTitle>
