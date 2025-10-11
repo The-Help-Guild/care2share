@@ -75,22 +75,43 @@ export const BlockReportMenu = ({ userId, onBlock }: BlockReportMenuProps) => {
   const handleReport = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        // Rate limit check
-        const { checkRateLimit } = await import('@/lib/rateLimit');
-        const rateLimitCheck = await checkRateLimit(session.user.id, 'block_report');
-        if (!rateLimitCheck.allowed) {
-          toast.error(`Too many block/report actions. Please wait before trying again.`);
-          return;
-        }
+      if (!session) {
+        toast.error("Please sign in to report users");
+        return;
       }
 
-      // In a production app, this would submit a report to admins
-      toast.success("User reported. Our team will review this report.");
+      // Rate limit check
+      const { checkRateLimit } = await import('@/lib/rateLimit');
+      const rateLimitCheck = await checkRateLimit(session.user.id, 'block_report');
+      if (!rateLimitCheck.allowed) {
+        toast.error(`Too many block/report actions. Please wait before trying again.`);
+        return;
+      }
+
+      // Validate user ID
+      const validatedUserId = userIdSchema.parse(userId);
+
+      // Store report in database
+      const { error } = await supabase
+        .from('user_reports')
+        .insert({
+          reporter_id: session.user.id,
+          reported_user_id: validatedUserId,
+          reason: 'User Report',
+          details: 'User reported via Block/Report menu'
+        });
+
+      if (error) throw error;
+
+      toast.success("Report submitted. Our team will review it.");
       setShowReportDialog(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Report error:', error);
+      if (error instanceof z.ZodError) {
+        toast.error("Invalid user ID");
+      } else {
+        toast.error("Failed to submit report. Please try again.");
+      }
     }
   };
 
