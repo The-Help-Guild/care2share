@@ -41,11 +41,17 @@ const Home = () => {
     };
 
     const loadRecentProfiles = async () => {
+      // Only query non-sensitive fields for other users' profiles
       const { data } = await supabase
         .from("profiles")
         .select(`
-          *,
-          profile_domains!inner(
+          id,
+          full_name,
+          bio,
+          location,
+          profile_photo_url,
+          created_at,
+          profile_domains(
             domains(name)
           )
         `)

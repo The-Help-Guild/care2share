@@ -64,7 +64,11 @@ const Search = () => {
       let queryBuilder = supabase
         .from("profiles")
         .select(`
-          *,
+          id,
+          full_name,
+          bio,
+          location,
+          profile_photo_url,
           profile_domains!inner(
             domain_id,
             domains(id, name)

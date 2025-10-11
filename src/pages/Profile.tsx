@@ -35,9 +35,14 @@ const Profile = () => {
       if (!id) return;
 
       try {
+        // Query only safe fields - don't request email, latitude, longitude, resume_url unless it's own profile
+        const fieldsToSelect = id === currentUserId 
+          ? "*"  // Own profile - get everything
+          : "id, full_name, bio, location, profile_photo_url, created_at";  // Other profiles - only safe fields
+        
         const { data: profileData, error: profileError } = await supabase
           .from("profiles")
-          .select("*")
+          .select(fieldsToSelect)
           .eq("id", id)
           .single();
 
@@ -113,15 +118,30 @@ const Profile = () => {
 
       if (convError) throw convError;
 
-      // Add participants
-      const { error: participantsError } = await supabase
+      // Add current user as participant (they can only add themselves)
+      const { error: currentUserError } = await supabase
         .from("conversation_participants")
-        .insert([
-          { conversation_id: newConversation.id, user_id: currentUserId },
-          { conversation_id: newConversation.id, user_id: id }
-        ]);
+        .insert({ conversation_id: newConversation.id, user_id: currentUserId });
 
-      if (participantsError) throw participantsError;
+      if (currentUserError) throw currentUserError;
+
+      // Note: In a production app, you would need to implement an invitation system
+      // where the other user accepts a conversation request before being added.
+      // For now, we'll use a service role key approach or modify the RLS policy
+      // to allow adding two participants during conversation creation.
+      
+      // Temporary workaround: Add other user (this requires service role or policy adjustment)
+      const { error: otherUserError } = await supabase
+        .from("conversation_participants")
+        .insert({ conversation_id: newConversation.id, user_id: id });
+
+      if (otherUserError) {
+        // If we can't add the other user, clean up the conversation
+        await supabase.from("conversation_participants").delete().eq("conversation_id", newConversation.id);
+        await supabase.from("conversations").delete().eq("id", newConversation.id);
+        toast.error("Unable to start conversation. An invitation system is needed.");
+        return;
+      }
 
       navigate(`/messages?conversation=${newConversation.id}`);
     } catch (error: any) {
