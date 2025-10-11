@@ -3,34 +3,42 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import welcomeImg from "@/assets/onboarding-welcome-optimized.jpg";
+import welcomeImgWebp from "@/assets/onboarding-welcome-optimized.webp";
 import shareImg from "@/assets/onboarding-share-optimized.jpg";
+import shareImgWebp from "@/assets/onboarding-share-optimized.webp";
 import findImg from "@/assets/onboarding-find-optimized.jpg";
+import findImgWebp from "@/assets/onboarding-find-optimized.webp";
 import logo from "@/assets/logo-optimized.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Footer } from "@/components/Footer";
 
 const OnboardingScreen = ({
   image, 
+  imageWebp,
   title, 
   subtitle, 
   index 
 }: { 
-  image: string; 
+  image: string;
+  imageWebp: string;
   title: string; 
   subtitle: string; 
   index: number;
 }) => (
   <div className="flex flex-col items-center justify-center p-6 md:p-12 animate-fade-in">
     <div className="w-full max-w-2xl">
-      <img 
-        src={image} 
-        alt={title}
-        width="800"
-        height="480"
-        loading={index === 0 ? "eager" : "lazy"}
-        fetchPriority={index === 0 ? "high" : "auto"}
-        className="w-full h-64 md:h-80 object-cover rounded-2xl shadow-card mb-8"
-      />
+      <picture>
+        <source srcSet={imageWebp} type="image/webp" />
+        <img 
+          src={image} 
+          alt={title}
+          width="800"
+          height="480"
+          loading={index === 0 ? "eager" : "lazy"}
+          fetchPriority={index === 0 ? "high" : "auto"}
+          className="w-full h-64 md:h-80 object-cover rounded-2xl shadow-card mb-8"
+        />
+      </picture>
       <h1 className="text-3xl md:text-4xl font-bold text-center mb-4 text-primary">
         {title}
       </h1>
@@ -48,16 +56,19 @@ const Onboarding = () => {
   const screens = [
     {
       image: welcomeImg,
+      imageWebp: welcomeImgWebp,
       title: "Building a Community That Cares",
       subtitle: "Connect with neighbors who share knowledge, skills, and help freely. Welcome to Care2Share.",
     },
     {
       image: shareImg,
+      imageWebp: shareImgWebp,
       title: "Share Your Expertise",
       subtitle: "Offer your knowledge and skills in areas you're passionate about. Help others grow.",
     },
     {
       image: findImg,
+      imageWebp: findImgWebp,
       title: "Find the Help You Need",
       subtitle: "Connect with neighbors and friends for advice, services, and support—for free.",
     },
