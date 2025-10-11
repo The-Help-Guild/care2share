@@ -118,31 +118,17 @@ const Profile = () => {
 
       if (convError) throw convError;
 
-      // Add current user as participant (they can only add themselves)
-      const { error: currentUserError } = await supabase
+      // Add both participants to the conversation
+      const { error: participantsError } = await supabase
         .from("conversation_participants")
-        .insert({ conversation_id: newConversation.id, user_id: currentUserId });
+        .insert([
+          { conversation_id: newConversation.id, user_id: currentUserId },
+          { conversation_id: newConversation.id, user_id: id }
+        ]);
 
-      if (currentUserError) throw currentUserError;
+      if (participantsError) throw participantsError;
 
-      // Note: In a production app, you would need to implement an invitation system
-      // where the other user accepts a conversation request before being added.
-      // For now, we'll use a service role key approach or modify the RLS policy
-      // to allow adding two participants during conversation creation.
-      
-      // Temporary workaround: Add other user (this requires service role or policy adjustment)
-      const { error: otherUserError } = await supabase
-        .from("conversation_participants")
-        .insert({ conversation_id: newConversation.id, user_id: id });
-
-      if (otherUserError) {
-        // If we can't add the other user, clean up the conversation
-        await supabase.from("conversation_participants").delete().eq("conversation_id", newConversation.id);
-        await supabase.from("conversations").delete().eq("id", newConversation.id);
-        toast.error("Unable to start conversation. An invitation system is needed.");
-        return;
-      }
-
+      toast.success("Conversation started!");
       navigate(`/messages?conversation=${newConversation.id}`);
     } catch (error: any) {
       toast.error("Failed to start conversation");
