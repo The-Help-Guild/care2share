@@ -17,6 +17,7 @@ import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { z } from "zod";
 import { CATEGORIES } from "@/lib/constants";
+import DOMPurify from "dompurify";
 
 const requestSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters").max(200, "Title too long"),
@@ -27,6 +28,14 @@ const requestSchema = z.object({
 const replySchema = z.object({
   content: z.string().min(1, "Reply cannot be empty").max(2000, "Reply too long"),
 });
+
+// Sanitization helper to strip all HTML and prevent XSS attacks
+const sanitizeInput = (content: string): string => {
+  return DOMPurify.sanitize(content, { 
+    ALLOWED_TAGS: [], // Strip all HTML tags
+    ALLOWED_ATTR: [] // Strip all attributes
+  });
+};
 
 interface SupportRequest {
   id: string;
@@ -215,8 +224,8 @@ const SupportRequests = () => {
       setSubmitting(true);
       
       const validated = requestSchema.parse({
-        title: newTitle.trim(),
-        description: newDescription.trim(),
+        title: sanitizeInput(newTitle.trim()),
+        description: sanitizeInput(newDescription.trim()),
         category: newCategory
       });
 
@@ -257,7 +266,7 @@ const SupportRequests = () => {
       setSubmitting(true);
       
       const validated = replySchema.parse({
-        content: replyContent.trim()
+        content: sanitizeInput(replyContent.trim())
       });
 
       const { error } = await supabase
