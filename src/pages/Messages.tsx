@@ -52,7 +52,6 @@ const Messages = () => {
   const [sending, setSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
-  const [lastMessageTime, setLastMessageTime] = useState<number>(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -241,15 +240,17 @@ const Messages = () => {
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation || !currentUserId) return;
 
-    // Rate limiting: 1 message per 2 seconds
-    const now = Date.now();
-    if (now - lastMessageTime < 2000) {
-      toast.error("Please wait a moment before sending another message");
-      return;
-    }
-
     try {
       setSending(true);
+      
+      // Server-side rate limiting check
+      const { checkRateLimit } = await import('@/lib/rateLimit');
+      const rateLimitCheck = await checkRateLimit(currentUserId, 'message');
+      if (!rateLimitCheck.allowed) {
+        toast.error(`Rate limit exceeded. Please wait ${Math.ceil((rateLimitCheck.remainingTime || 60) / 60)} minute(s) before sending more messages.`);
+        setSending(false);
+        return;
+      }
       
       // Validate message content
       const validated = messageSchema.parse({ content: newMessage.trim() });
@@ -278,7 +279,6 @@ const Messages = () => {
         .eq('user_id', currentUserId);
 
       setNewMessage("");
-      setLastMessageTime(now);
       loadConversations();
     } catch (error) {
       if (error instanceof z.ZodError) {

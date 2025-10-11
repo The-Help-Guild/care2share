@@ -76,6 +76,18 @@ const Auth = () => {
     try {
       setLoading(true);
 
+      // Rate limit check for authentication attempts
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (currentSession?.user) {
+        const { checkRateLimit } = await import('@/lib/rateLimit');
+        const rateLimitCheck = await checkRateLimit(currentSession.user.id, 'auth_attempt');
+        if (!rateLimitCheck.allowed) {
+          toast.error(`Too many authentication attempts. Please wait ${Math.ceil((rateLimitCheck.remainingTime || 300) / 60)} minutes before trying again.`);
+          setLoading(false);
+          return;
+        }
+      }
+
       const validationData = mode === "signup" 
         ? { email, password, fullName, termsAccepted }
         : { email, password };

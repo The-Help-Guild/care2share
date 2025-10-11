@@ -41,6 +41,14 @@ export const BlockReportMenu = ({ userId, onBlock }: BlockReportMenuProps) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
+      // Rate limit check
+      const { checkRateLimit } = await import('@/lib/rateLimit');
+      const rateLimitCheck = await checkRateLimit(session.user.id, 'block_report');
+      if (!rateLimitCheck.allowed) {
+        toast.error(`Too many block/report actions. Please wait before trying again.`);
+        return;
+      }
+
       const { error } = await supabase
         .from("blocked_users")
         .insert({
@@ -64,10 +72,26 @@ export const BlockReportMenu = ({ userId, onBlock }: BlockReportMenuProps) => {
     }
   };
 
-  const handleReport = () => {
-    // In a production app, this would submit a report to admins
-    toast.success("User reported. Our team will review this report.");
-    setShowReportDialog(false);
+  const handleReport = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        // Rate limit check
+        const { checkRateLimit } = await import('@/lib/rateLimit');
+        const rateLimitCheck = await checkRateLimit(session.user.id, 'block_report');
+        if (!rateLimitCheck.allowed) {
+          toast.error(`Too many block/report actions. Please wait before trying again.`);
+          return;
+        }
+      }
+
+      // In a production app, this would submit a report to admins
+      toast.success("User reported. Our team will review this report.");
+      setShowReportDialog(false);
+    } catch (error) {
+      console.error('Report error:', error);
+    }
   };
 
   return (

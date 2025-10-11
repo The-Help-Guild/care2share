@@ -107,6 +107,16 @@ const EditProfile = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
+      // Rate limit check for file uploads
+      if (currentUserId) {
+        const { checkRateLimit } = await import('@/lib/rateLimit');
+        const rateLimitCheck = await checkRateLimit(currentUserId, 'file_upload');
+        if (!rateLimitCheck.allowed) {
+          toast.error(`Too many file uploads. Please wait ${Math.ceil((rateLimitCheck.remainingTime || 3600) / 60)} minutes before trying again.`);
+          return;
+        }
+      }
+      
       if (!file.type.startsWith("image/")) {
         toast.error("Please select an image file");
         return;
@@ -122,9 +132,19 @@ const EditProfile = () => {
     }
   };
 
-  const handleResumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleResumeChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      
+      // Rate limit check for file uploads
+      if (currentUserId) {
+        const { checkRateLimit } = await import('@/lib/rateLimit');
+        const rateLimitCheck = await checkRateLimit(currentUserId, 'file_upload');
+        if (!rateLimitCheck.allowed) {
+          toast.error(`Too many file uploads. Please wait ${Math.ceil((rateLimitCheck.remainingTime || 3600) / 60)} minutes before trying again.`);
+          return;
+        }
+      }
       
       if (file.type !== "application/pdf") {
         toast.error("Please select a PDF file");
@@ -167,6 +187,15 @@ const EditProfile = () => {
 
     setSaving(true);
     try {
+      // Rate limit check
+      const { checkRateLimit } = await import('@/lib/rateLimit');
+      const rateLimitCheck = await checkRateLimit(currentUserId, 'profile_update');
+      if (!rateLimitCheck.allowed) {
+        toast.error(`You've updated your profile too many times. Please wait ${Math.ceil((rateLimitCheck.remainingTime || 3600) / 60)} minutes before trying again.`);
+        setSaving(false);
+        return;
+      }
+
       let photoUrl = profilePhotoUrl;
       let resumeUrl = existingResumeUrl;
 

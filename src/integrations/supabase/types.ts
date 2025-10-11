@@ -274,6 +274,27 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_audit: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       typing_indicators: {
         Row: {
           conversation_id: string
@@ -308,6 +329,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      clean_old_rate_limits: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       clean_old_typing_indicators: {
         Args: Record<PropertyKey, never>
         Returns: undefined

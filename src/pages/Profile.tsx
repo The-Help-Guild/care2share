@@ -96,6 +96,14 @@ const Profile = () => {
     if (!id || !currentUserId) return;
 
     try {
+      // Rate limit check
+      const { checkRateLimit } = await import('@/lib/rateLimit');
+      const rateLimitCheck = await checkRateLimit(currentUserId, 'conversation');
+      if (!rateLimitCheck.allowed) {
+        toast.error(`You've created too many conversations. Please wait ${Math.ceil((rateLimitCheck.remainingTime || 3600) / 60)} minutes before trying again.`);
+        return;
+      }
+
       // Check if conversation already exists between these users
       const { data: existingConversations } = await supabase
         .from("conversation_participants")

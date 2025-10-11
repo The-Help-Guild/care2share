@@ -68,6 +68,18 @@ const Search = () => {
     setLoading(true);
 
     try {
+      // Rate limit check
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { checkRateLimit } = await import('@/lib/rateLimit');
+        const rateLimitCheck = await checkRateLimit(session.user.id, 'search');
+        if (!rateLimitCheck.allowed) {
+          toast.error(`Too many searches. Please wait a moment before searching again.`);
+          setLoading(false);
+          return;
+        }
+      }
+
       let queryBuilder = supabase
         .from("profiles")
         .select(`
