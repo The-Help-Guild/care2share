@@ -176,7 +176,7 @@ const MyProfile = () => {
               <Button
                 variant="outline"
                 className="w-full justify-start"
-                onClick={() => navigate('/edit-profile')}
+                onClick={() => navigate('/profile/edit')}
               >
                 Edit Profile
               </Button>
