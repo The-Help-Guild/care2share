@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Mail, Lock, User, Loader2 } from "lucide-react";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo-optimized.png";
 import { z } from "zod";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -146,7 +146,7 @@ const Auth = () => {
       <div className="flex-1 flex items-center justify-center p-6">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          <img src={logo} alt="Care2Share" className="h-20 w-20 mx-auto mb-4" />
+          <img src={logo} alt="Care2Share" width="128" height="128" className="h-20 w-20 mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-primary mb-2">
             {mode === "signup" ? "Join Care2Share" : "Welcome Back"}
           </h1>

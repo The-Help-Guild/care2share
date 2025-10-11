@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, ChevronLeft } from "lucide-react";
-import welcomeImg from "@/assets/onboarding-welcome.jpg";
-import shareImg from "@/assets/onboarding-share.jpg";
-import findImg from "@/assets/onboarding-find.jpg";
-import logo from "@/assets/logo.png";
+import welcomeImg from "@/assets/onboarding-welcome-optimized.jpg";
+import shareImg from "@/assets/onboarding-share-optimized.jpg";
+import findImg from "@/assets/onboarding-find-optimized.jpg";
+import logo from "@/assets/logo-optimized.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Footer } from "@/components/Footer";
 
@@ -25,6 +25,10 @@ const OnboardingScreen = ({
       <img 
         src={image} 
         alt={title}
+        width="800"
+        height="480"
+        loading={index === 0 ? "eager" : "lazy"}
+        fetchPriority={index === 0 ? "high" : "auto"}
         className="w-full h-64 md:h-80 object-cover rounded-2xl shadow-card mb-8"
       />
       <h1 className="text-3xl md:text-4xl font-bold text-center mb-4 text-primary">
@@ -76,7 +80,7 @@ const Onboarding = () => {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="p-6 flex justify-between items-center">
-        <img src={logo} alt="Care2Share" className="h-16 w-16" />
+        <img src={logo} alt="Care2Share" width="128" height="128" className="h-16 w-16" />
         <ThemeToggle />
       </header>
 
