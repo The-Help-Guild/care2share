@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,12 +27,17 @@ interface BlockReportMenuProps {
   onBlock?: () => void;
 }
 
+const userIdSchema = z.string().uuid("Invalid user ID");
+
 export const BlockReportMenu = ({ userId, onBlock }: BlockReportMenuProps) => {
   const [showBlockDialog, setShowBlockDialog] = useState(false);
   const [showReportDialog, setShowReportDialog] = useState(false);
 
   const handleBlock = async () => {
     try {
+      // Validate user ID
+      const validatedUserId = userIdSchema.parse(userId);
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
@@ -39,7 +45,7 @@ export const BlockReportMenu = ({ userId, onBlock }: BlockReportMenuProps) => {
         .from("blocked_users")
         .insert({
           blocker_user_id: session.user.id,
-          blocked_user_id: userId
+          blocked_user_id: validatedUserId
         });
 
       if (error) throw error;
@@ -48,7 +54,9 @@ export const BlockReportMenu = ({ userId, onBlock }: BlockReportMenuProps) => {
       setShowBlockDialog(false);
       onBlock?.();
     } catch (error: any) {
-      if (error.message?.includes("duplicate")) {
+      if (error instanceof z.ZodError) {
+        toast.error("Invalid user ID");
+      } else if (error.message?.includes("duplicate")) {
         toast.error("User is already blocked");
       } else {
         toast.error("Failed to block user");

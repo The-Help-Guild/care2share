@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +15,11 @@ import { Label } from "@/components/ui/label";
 import { Search as SearchIcon, Filter, Loader2 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+
+const searchInputSchema = z.object({
+  query: z.string().max(200, "Search query too long (max 200 characters)"),
+  location: z.string().max(100, "Location too long (max 100 characters)")
+});
 
 const Search = () => {
   const [searchParams] = useSearchParams();
@@ -161,8 +168,16 @@ const Search = () => {
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
-      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-      performSearch(searchQuery, selectedDomains, locationFilter);
+      try {
+        // Validate search inputs
+        searchInputSchema.parse({ query: searchQuery, location: locationFilter });
+        navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+        performSearch(searchQuery, selectedDomains, locationFilter);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          toast.error(error.errors[0].message);
+        }
+      }
     }
   };
 
@@ -176,9 +191,20 @@ const Search = () => {
   };
 
   const handleLocationFilterChange = (location: string) => {
-    setLocationFilter(location);
-    if (searchQuery.trim()) {
-      performSearch(searchQuery, selectedDomains, location);
+    try {
+      // Validate location input
+      if (location) {
+        searchInputSchema.shape.location.parse(location);
+      }
+      setLocationFilter(location);
+      if (searchQuery.trim()) {
+        performSearch(searchQuery, selectedDomains, location);
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+        return;
+      }
     }
   };
 
