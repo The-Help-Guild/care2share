@@ -10,6 +10,7 @@ import { Search, TrendingUp, Users, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import UserMenu from "@/components/UserMenu";
 import { formatDistanceToNow } from "date-fns";
 
 const Home = () => {
@@ -130,7 +131,10 @@ const Home = () => {
             <h1 className="text-2xl font-bold text-primary">
               Welcome, {currentUser?.profile?.full_name?.split(" ")[0] || "Friend"}!
             </h1>
-            <ThemeToggle />
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <UserMenu />
+            </div>
           </div>
           
           <div className="flex gap-2">

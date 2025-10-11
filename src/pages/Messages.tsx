@@ -10,6 +10,7 @@ import { MessageCircle, Send, ArrowLeft, Loader2, Search as SearchIcon } from "l
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import UserMenu from "@/components/UserMenu";
 import { z } from "zod";
 
 const messageSchema = z.object({
@@ -365,7 +366,10 @@ const Messages = () => {
               <div className="max-w-4xl mx-auto p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h1 className="text-2xl font-bold text-primary">Messages</h1>
-                  <ThemeToggle />
+                  <div className="flex items-center gap-3">
+                    <ThemeToggle />
+                    <UserMenu />
+                  </div>
                 </div>
                 <div className="relative">
                   <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -529,7 +533,10 @@ const Messages = () => {
         <header className="bg-card border-b">
           <div className="max-w-7xl mx-auto p-4 flex items-center justify-between">
             <h1 className="text-2xl font-bold text-primary">Messages</h1>
-            <ThemeToggle />
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <UserMenu />
+            </div>
           </div>
         </header>
 
