@@ -303,7 +303,7 @@ const Home = () => {
                 key={domain.id}
                 variant="outline"
                 className="h-auto py-4 px-4 flex flex-col items-center gap-2 hover-lift"
-                onClick={() => navigate(`/search?domains=${encodeURIComponent(domain.name)}`)}
+                onClick={() => navigate(`/feed?domain=${encodeURIComponent(domain.name)}`)}
               >
                 {domain.icon && <span className="text-2xl">{domain.icon}</span>}
                 <span className="font-medium text-center text-sm">{domain.name}</span>

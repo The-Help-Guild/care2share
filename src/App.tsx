@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import ProfileSetup from "./pages/ProfileSetup";
 import EditProfile from "./pages/EditProfile";
 import Home from "./pages/Home";
+import Feed from "./pages/Feed";
 import Search from "./pages/Search";
 import Profile from "./pages/Profile";
 import MyProfile from "./pages/MyProfile";
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/profile-setup" element={<ProfileSetup />} />
               <Route path="/profile/edit" element={<EditProfile />} />
               <Route path="/home" element={<Home />} />
+              <Route path="/feed" element={<Feed />} />
               <Route path="/search" element={<Search />} />
               <Route path="/profile/:id" element={<Profile />} />
               <Route path="/my-profile" element={<MyProfile />} />
