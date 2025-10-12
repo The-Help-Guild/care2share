@@ -74,11 +74,7 @@ const Feed = () => {
     setLoading(true);
     let query = supabase
       .from("posts")
-      .select(`
-        *,
-        profiles(full_name, profile_photo_url),
-        domains(name, icon)
-      `)
+      .select("*")
       .order("created_at", { ascending: false });
 
     if (selectedDomain) {
