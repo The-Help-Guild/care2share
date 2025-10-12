@@ -160,12 +160,12 @@ const Feed = () => {
           </div>
 
           <div className="flex gap-2">
-            <Select value={selectedDomain} onValueChange={setSelectedDomain}>
+            <Select value={selectedDomain || "all"} onValueChange={(value) => setSelectedDomain(value === "all" ? "" : value)}>
               <SelectTrigger className="flex-1">
                 <SelectValue placeholder="All Domains" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Domains</SelectItem>
+                <SelectItem value="all">All Domains</SelectItem>
                 {domains.map((domain) => (
                   <SelectItem key={domain.id} value={domain.name}>
                     {domain.icon && <span className="mr-2">{domain.icon}</span>}
@@ -206,12 +206,12 @@ const Feed = () => {
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Domain (Optional)</label>
-                    <Select value={newPost.domain_id} onValueChange={(value) => setNewPost({ ...newPost, domain_id: value })}>
+                    <Select value={newPost.domain_id || "none"} onValueChange={(value) => setNewPost({ ...newPost, domain_id: value === "none" ? "" : value })}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a domain" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No Domain</SelectItem>
+                        <SelectItem value="none">No Domain</SelectItem>
                         {domains.map((domain) => (
                           <SelectItem key={domain.id} value={domain.id}>
                             {domain.icon && <span className="mr-2">{domain.icon}</span>}
