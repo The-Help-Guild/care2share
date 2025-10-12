@@ -16,6 +16,7 @@ import { Search as SearchIcon, Filter, Loader2 } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { CATEGORIES } from "@/lib/constants";
 
 const searchInputSchema = z.object({
@@ -269,7 +270,8 @@ const Search = () => {
             <h1 className="text-2xl font-bold text-primary">
               Search Community
             </h1>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <NotificationCenter />
               <ThemeToggle />
               <UserMenu />
             </div>

@@ -11,7 +11,11 @@ import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { MentionInput } from "@/components/MentionInput";
+import { extractMentions, createMentionNotification, saveMentions, createNewMessageNotification } from "@/lib/messageHelpers";
 import { z } from "zod";
+import DOMPurify from "dompurify";
 
 const messageSchema = z.object({
   content: z.string()
@@ -54,6 +58,7 @@ const Messages = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -254,18 +259,70 @@ const Messages = () => {
         return;
       }
       
-      // Validate message content
-      const validated = messageSchema.parse({ content: newMessage.trim() });
+      // Validate and sanitize message content
+      const sanitizedContent = DOMPurify.sanitize(newMessage.trim(), { 
+        ALLOWED_TAGS: [], 
+        ALLOWED_ATTR: [] 
+      });
+      const validated = messageSchema.parse({ content: sanitizedContent });
       
-      const { error } = await supabase
+      const { data: messageData, error } = await supabase
         .from("messages")
         .insert({
           conversation_id: selectedConversation,
           sender_id: currentUserId,
           content: validated.content
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Handle mentions
+      if (mentionedUserIds.length > 0 && messageData) {
+        await saveMentions(messageData.id, mentionedUserIds);
+        
+        // Get sender's name
+        const { data: senderProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', currentUserId)
+          .single();
+
+        // Create notifications for mentioned users
+        for (const userId of mentionedUserIds) {
+          await createMentionNotification(
+            userId,
+            senderProfile?.full_name || 'Someone',
+            validated.content,
+            selectedConversation
+          );
+        }
+      }
+
+      // Notify other participants about new message
+      const { data: otherParticipants } = await supabase
+        .from('conversation_participants')
+        .select('user_id')
+        .eq('conversation_id', selectedConversation)
+        .neq('user_id', currentUserId);
+
+      if (otherParticipants) {
+        const { data: senderProfile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', currentUserId)
+          .single();
+
+        for (const participant of otherParticipants) {
+          await createNewMessageNotification(
+            participant.user_id,
+            senderProfile?.full_name || 'Someone',
+            validated.content,
+            selectedConversation
+          );
+        }
+      }
 
       // Update conversation timestamp
       await supabase
@@ -281,6 +338,7 @@ const Messages = () => {
         .eq('user_id', currentUserId);
 
       setNewMessage("");
+      setMentionedUserIds([]);
       loadConversations();
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -366,7 +424,8 @@ const Messages = () => {
               <div className="max-w-4xl mx-auto p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h1 className="text-2xl font-bold text-primary">Messages</h1>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <NotificationCenter />
                     <ThemeToggle />
                     <UserMenu />
                   </div>
@@ -472,13 +531,24 @@ const Messages = () => {
                   className={`flex ${message.sender_id === currentUserId ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                      message.sender_id === currentUserId
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                    }`}
-                  >
-                    <p className="text-sm">{message.content}</p>
+                     className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                       message.sender_id === currentUserId
+                         ? 'bg-primary text-primary-foreground'
+                         : 'bg-muted'
+                     }`}
+                   >
+                     <p 
+                       className="text-sm" 
+                       dangerouslySetInnerHTML={{ 
+                         __html: DOMPurify.sanitize(
+                           message.content.replace(
+                             /@(\w+)/g,
+                             '<span class="font-semibold">@$1</span>'
+                           ),
+                           { ALLOWED_TAGS: ['span'], ALLOWED_ATTR: ['class'] }
+                         )
+                       }}
+                     />
                     <div className="flex items-center gap-2 mt-1">
                       <p className={`text-xs ${
                         message.sender_id === currentUserId ? 'text-primary-foreground/70' : 'text-muted-foreground'
@@ -506,24 +576,35 @@ const Messages = () => {
               <div ref={messagesEndRef} />
             </main>
 
-            <div className="fixed bottom-16 left-0 right-0 bg-card border-t p-4">
-              <div className="max-w-4xl mx-auto flex gap-2">
-                <Input
-                  value={newMessage}
-                  onChange={handleTyping}
-                  onKeyPress={(e) => e.key === 'Enter' && !sending && handleSendMessage()}
-                  placeholder="Type a message..."
-                  className="flex-1"
-                />
-                <Button
-                  onClick={handleSendMessage}
-                  disabled={!newMessage.trim() || sending}
-                  size="icon"
-                >
-                  {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                </Button>
-              </div>
-            </div>
+             <div className="fixed bottom-16 left-0 right-0 bg-card border-t p-4">
+               <div className="max-w-4xl mx-auto flex gap-2">
+                 <MentionInput
+                   value={newMessage}
+                   onChange={(value) => {
+                     setNewMessage(value);
+                     handleTyping({ target: { value } } as React.ChangeEvent<HTMLInputElement>);
+                   }}
+                   onMentionSelect={(userId) => {
+                     setMentionedUserIds(prev => [...new Set([...prev, userId])]);
+                   }}
+                   onKeyDown={(e) => {
+                     if (e.key === 'Enter' && !e.shiftKey && !sending) {
+                       e.preventDefault();
+                       handleSendMessage();
+                     }
+                   }}
+                   placeholder="Type a message... (use @ to mention)"
+                   disabled={sending}
+                 />
+                 <Button
+                   onClick={handleSendMessage}
+                   disabled={!newMessage.trim() || sending}
+                   size="icon"
+                 >
+                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                 </Button>
+               </div>
+             </div>
           </>
         )}
       </div>
@@ -627,13 +708,24 @@ const Messages = () => {
                         className={`flex ${message.sender_id === currentUserId ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                            message.sender_id === currentUserId
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
-                          }`}
-                        >
-                          <p className="text-sm">{message.content}</p>
+                     className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                       message.sender_id === currentUserId
+                         ? 'bg-primary text-primary-foreground'
+                         : 'bg-muted'
+                     }`}
+                   >
+                     <p 
+                       className="text-sm" 
+                       dangerouslySetInnerHTML={{ 
+                         __html: DOMPurify.sanitize(
+                           message.content.replace(
+                             /@(\w+)/g,
+                             '<span class="font-semibold">@$1</span>'
+                           ),
+                           { ALLOWED_TAGS: ['span'], ALLOWED_ATTR: ['class'] }
+                         )
+                       }}
+                     />
                           <div className="flex items-center gap-2 mt-1">
                             <p className={`text-xs ${
                               message.sender_id === currentUserId ? 'text-primary-foreground/70' : 'text-muted-foreground'

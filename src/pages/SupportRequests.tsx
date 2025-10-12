@@ -15,6 +15,8 @@ import { MessageSquare, Plus, Search, Clock, CheckCircle, AlertCircle, Filter, S
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { StartConversationButton } from "@/components/StartConversationButton";
 import { z } from "zod";
 import { CATEGORIES } from "@/lib/constants";
 import DOMPurify from "dompurify";
@@ -384,7 +386,10 @@ const SupportRequests = () => {
         <div className="max-w-4xl mx-auto p-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold text-primary">Support Requests</h1>
-            <ThemeToggle />
+            <div className="flex items-center gap-2">
+              <NotificationCenter />
+              <ThemeToggle />
+            </div>
           </div>
           
           <div className="flex gap-2 mb-3">
@@ -540,18 +545,28 @@ const SupportRequests = () => {
                         {getInitials(request.profiles.full_name)}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2 mb-1">
-                        <CardTitle className="text-base">{request.title}</CardTitle>
-                        <Badge variant="outline" className={`${getStatusColor(request.status)} shrink-0`}>
-                          {getStatusIcon(request.status)}
-                          <span className="ml-1 capitalize">{request.status.replace('_', ' ')}</span>
-                        </Badge>
-                      </div>
-                      <CardDescription className="text-sm">
-                        {request.profiles.full_name} • {formatDate(request.created_at)}
-                      </CardDescription>
-                    </div>
+                     <div className="flex-1 min-w-0">
+                       <div className="flex items-start justify-between gap-2 mb-1">
+                         <CardTitle className="text-base">{request.title}</CardTitle>
+                         <Badge variant="outline" className={`${getStatusColor(request.status)} shrink-0`}>
+                           {getStatusIcon(request.status)}
+                           <span className="ml-1 capitalize">{request.status.replace('_', ' ')}</span>
+                         </Badge>
+                       </div>
+                       <CardDescription className="text-sm">
+                         {request.profiles.full_name} • {formatDate(request.created_at)}
+                       </CardDescription>
+                       {userId && request.user_id !== userId && (
+                         <div className="mt-2">
+                           <StartConversationButton
+                             targetUserId={request.user_id}
+                             currentUserId={userId}
+                             variant="outline"
+                             size="sm"
+                           />
+                         </div>
+                       )}
+                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">

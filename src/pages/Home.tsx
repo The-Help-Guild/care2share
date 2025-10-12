@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { StartConversationButton } from "@/components/StartConversationButton";
 import { formatDistanceToNow } from "date-fns";
 
 const Home = () => {
@@ -19,6 +21,7 @@ const Home = () => {
   const [recentProfiles, setRecentProfiles] = useState<any[]>([]);
   const [supportRequests, setSupportRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,6 +44,7 @@ const Home = () => {
       }
 
       setCurrentUser({ ...session.user, profile });
+      setUserId(session.user.id);
     };
 
     const loadRecentProfiles = async () => {
@@ -131,7 +135,8 @@ const Home = () => {
             <h1 className="text-2xl font-bold text-primary">
               Welcome, {currentUser?.profile?.full_name?.split(" ")[0] || "Friend"}!
             </h1>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <NotificationCenter />
               <ThemeToggle />
               <UserMenu />
             </div>
@@ -232,7 +237,7 @@ const Home = () => {
                 onClick={() => navigate('/support')}
               >
                 <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-3">
+                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-base mb-1">{request.title}</CardTitle>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -243,12 +248,22 @@ const Home = () => {
                         <span>{formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}</span>
                       </div>
                     </div>
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarImage src={request.profiles?.profile_photo_url} />
-                      <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                        {getInitials(request.profiles?.full_name || "?")}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="flex flex-col items-end gap-2">
+                      <Avatar className="h-8 w-8 shrink-0">
+                        <AvatarImage src={request.profiles?.profile_photo_url} />
+                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                          {getInitials(request.profiles?.full_name || "?")}
+                        </AvatarFallback>
+                      </Avatar>
+                      {userId && request.user_id !== userId && (
+                        <StartConversationButton
+                          targetUserId={request.user_id}
+                          currentUserId={userId}
+                          variant="ghost"
+                          size="sm"
+                        />
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
               </Card>
