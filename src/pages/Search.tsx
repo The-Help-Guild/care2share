@@ -17,6 +17,7 @@ import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { StartConversationButton } from "@/components/StartConversationButton";
 import { CATEGORIES } from "@/lib/constants";
 
 const searchInputSchema = z.object({
@@ -33,6 +34,7 @@ const Search = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [locationFilter, setLocationFilter] = useState("");
   const [loading, setLoading] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,7 +42,9 @@ const Search = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate("/auth");
+        return;
       }
+      setCurrentUserId(session.user.id);
     };
 
     const loadDomains = async () => {
@@ -445,8 +449,23 @@ const Search = () => {
                             ))}
                           </div>
                         </div>
+                       </div>
+                      <div className="flex flex-col gap-2">
+                        <Button variant="default" onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/profile/${profile.id}`);
+                        }}>
+                          View Profile
+                        </Button>
+                        {currentUserId && profile.id !== currentUserId && (
+                          <StartConversationButton
+                            targetUserId={profile.id}
+                            currentUserId={currentUserId}
+                            variant="outline"
+                            size="default"
+                          />
+                        )}
                       </div>
-                      <Button variant="default">View Profile</Button>
                     </div>
                   </CardHeader>
                 </Card>
