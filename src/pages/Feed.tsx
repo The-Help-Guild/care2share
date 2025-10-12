@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquare, Plus, Trash2, Pencil } from "lucide-react";
+import { MessageSquare, Plus, Trash2, Pencil, Heart, Send } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -43,6 +43,11 @@ const Feed = () => {
   const [newPost, setNewPost] = useState({ title: "", content: "", domain_id: "" });
   const [editingPost, setEditingPost] = useState<any>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [postLikes, setPostLikes] = useState<Record<string, { count: number; isLiked: boolean }>>({});
+  const [comments, setComments] = useState<Record<string, any[]>>({});
+  const [commentLikes, setCommentLikes] = useState<Record<string, { count: number; isLiked: boolean }>>({});
+  const [newComment, setNewComment] = useState<Record<string, string>>({});
+  const [expandedPosts, setExpandedPosts] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
 
@@ -84,6 +89,13 @@ const Feed = () => {
   useEffect(() => {
     loadPosts();
   }, [selectedDomain]);
+
+  useEffect(() => {
+    if (posts.length > 0 && currentUser) {
+      loadPostLikes();
+      loadAllComments();
+    }
+  }, [posts.length, currentUser]);
 
   const loadPosts = async () => {
     setLoading(true);
@@ -298,6 +310,194 @@ const Feed = () => {
     }
   };
 
+  const loadPostLikes = async () => {
+    if (!currentUser) return;
+
+    const postIds = posts.map(p => p.id);
+    const { data: likesData } = await supabase
+      .from("post_likes")
+      .select("post_id, user_id")
+      .in("post_id", postIds);
+
+    const likesMap: Record<string, { count: number; isLiked: boolean }> = {};
+    
+    postIds.forEach(postId => {
+      const postLikesData = likesData?.filter(l => l.post_id === postId) || [];
+      likesMap[postId] = {
+        count: postLikesData.length,
+        isLiked: postLikesData.some(l => l.user_id === currentUser.id)
+      };
+    });
+
+    setPostLikes(likesMap);
+  };
+
+  const togglePostLike = async (postId: string) => {
+    if (!currentUser) return;
+
+    const isLiked = postLikes[postId]?.isLiked;
+
+    if (isLiked) {
+      const { error } = await supabase
+        .from("post_likes")
+        .delete()
+        .eq("post_id", postId)
+        .eq("user_id", currentUser.id);
+
+      if (!error) {
+        setPostLikes(prev => ({
+          ...prev,
+          [postId]: { count: prev[postId].count - 1, isLiked: false }
+        }));
+      }
+    } else {
+      const { error } = await supabase
+        .from("post_likes")
+        .insert({ post_id: postId, user_id: currentUser.id });
+
+      if (!error) {
+        setPostLikes(prev => ({
+          ...prev,
+          [postId]: { count: (prev[postId]?.count || 0) + 1, isLiked: true }
+        }));
+      }
+    }
+  };
+
+  const loadAllComments = async () => {
+    const postIds = posts.map(p => p.id);
+    
+    const { data: commentsData } = await supabase
+      .from("comments")
+      .select("*, profiles(id, full_name, profile_photo_url)")
+      .in("post_id", postIds)
+      .order("created_at", { ascending: true });
+
+    if (commentsData) {
+      const commentsMap: Record<string, any[]> = {};
+      commentsData.forEach(comment => {
+        if (!commentsMap[comment.post_id]) {
+          commentsMap[comment.post_id] = [];
+        }
+        commentsMap[comment.post_id].push(comment);
+      });
+      setComments(commentsMap);
+
+      // Load comment likes
+      if (currentUser && commentsData.length > 0) {
+        const commentIds = commentsData.map(c => c.id);
+        const { data: likesData } = await supabase
+          .from("comment_likes")
+          .select("comment_id, user_id")
+          .in("comment_id", commentIds);
+
+        const likesMap: Record<string, { count: number; isLiked: boolean }> = {};
+        
+        commentIds.forEach(commentId => {
+          const commentLikesData = likesData?.filter(l => l.comment_id === commentId) || [];
+          likesMap[commentId] = {
+            count: commentLikesData.length,
+            isLiked: commentLikesData.some(l => l.user_id === currentUser.id)
+          };
+        });
+
+        setCommentLikes(likesMap);
+      }
+    }
+  };
+
+  const handleAddComment = async (postId: string) => {
+    if (!currentUser || !newComment[postId]?.trim()) return;
+
+    const sanitizedContent = DOMPurify.sanitize(newComment[postId].trim(), {
+      ALLOWED_TAGS: [],
+      ALLOWED_ATTR: []
+    });
+
+    if (sanitizedContent.length < 1 || sanitizedContent.length > 1000) {
+      toast({
+        title: "Validation Error",
+        description: "Comment must be between 1 and 1000 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("comments")
+      .insert({ post_id: postId, user_id: currentUser.id, content: sanitizedContent })
+      .select("*, profiles(id, full_name, profile_photo_url)")
+      .single();
+
+    if (!error && data) {
+      setComments(prev => ({
+        ...prev,
+        [postId]: [...(prev[postId] || []), data]
+      }));
+      setNewComment(prev => ({ ...prev, [postId]: "" }));
+      toast({ description: "Comment added!" });
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string, postId: string) => {
+    const { error } = await supabase
+      .from("comments")
+      .delete()
+      .eq("id", commentId);
+
+    if (!error) {
+      setComments(prev => ({
+        ...prev,
+        [postId]: prev[postId].filter(c => c.id !== commentId)
+      }));
+      toast({ description: "Comment deleted" });
+    }
+  };
+
+  const toggleCommentLike = async (commentId: string) => {
+    if (!currentUser) return;
+
+    const isLiked = commentLikes[commentId]?.isLiked;
+
+    if (isLiked) {
+      const { error } = await supabase
+        .from("comment_likes")
+        .delete()
+        .eq("comment_id", commentId)
+        .eq("user_id", currentUser.id);
+
+      if (!error) {
+        setCommentLikes(prev => ({
+          ...prev,
+          [commentId]: { count: prev[commentId].count - 1, isLiked: false }
+        }));
+      }
+    } else {
+      const { error } = await supabase
+        .from("comment_likes")
+        .insert({ comment_id: commentId, user_id: currentUser.id });
+
+      if (!error) {
+        setCommentLikes(prev => ({
+          ...prev,
+          [commentId]: { count: (prev[commentId]?.count || 0) + 1, isLiked: true }
+        }));
+      }
+    }
+  };
+
+  const toggleCommentsExpanded = (postId: string) => {
+    setExpandedPosts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(postId)) {
+        newSet.delete(postId);
+      } else {
+        newSet.add(postId);
+      }
+      return newSet;
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -500,6 +700,100 @@ const Feed = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground whitespace-pre-wrap">{post.content}</p>
+                
+                {/* Like and Comment Actions */}
+                <div className="flex items-center gap-4 mt-4 pt-4 border-t">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => togglePostLike(post.id)}
+                    className="gap-2"
+                  >
+                    <Heart
+                      className={`h-4 w-4 ${postLikes[post.id]?.isLiked ? "fill-destructive text-destructive" : ""}`}
+                    />
+                    <span>{postLikes[post.id]?.count || 0}</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleCommentsExpanded(post.id)}
+                    className="gap-2"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>{comments[post.id]?.length || 0}</span>
+                  </Button>
+                </div>
+
+                {/* Comments Section */}
+                {expandedPosts.has(post.id) && (
+                  <div className="mt-4 space-y-4">
+                    {/* Existing Comments */}
+                    {comments[post.id]?.map(comment => (
+                      <div key={comment.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg">
+                        <Avatar className="h-8 w-8 flex-shrink-0">
+                          <AvatarImage src={comment.profiles?.profile_photo_url} />
+                          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                            {getInitials(comment.profiles?.full_name || "?")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-medium text-sm">{comment.profiles?.full_name}</p>
+                            <span className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                            </span>
+                            {(currentUser?.id === comment.user_id || isAdmin) && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0 ml-auto"
+                                onClick={() => handleDeleteComment(comment.id, post.id)}
+                              >
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
+                          <p className="text-sm whitespace-pre-wrap mb-2">{comment.content}</p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleCommentLike(comment.id)}
+                            className="h-6 px-2 gap-1"
+                          >
+                            <Heart
+                              className={`h-3 w-3 ${commentLikes[comment.id]?.isLiked ? "fill-destructive text-destructive" : ""}`}
+                            />
+                            <span className="text-xs">{commentLikes[comment.id]?.count || 0}</span>
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Add Comment Input */}
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Write a comment..."
+                        value={newComment[post.id] || ""}
+                        onChange={(e) => setNewComment(prev => ({ ...prev, [post.id]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleAddComment(post.id);
+                          }
+                        }}
+                        className="flex-1"
+                      />
+                      <Button
+                        size="icon"
+                        onClick={() => handleAddComment(post.id)}
+                        disabled={!newComment[post.id]?.trim()}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))
