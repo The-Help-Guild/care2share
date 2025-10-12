@@ -147,22 +147,15 @@ const AdminPanel = () => {
 
     setActionLoading(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          is_blocked: true,
-          blocked_at: new Date().toISOString(),
-          blocked_by: currentAdminId,
-          block_reason: blockReason
-        })
-        .eq('id', selectedUser.id);
+      const { data, error } = await supabase.functions.invoke('block-user', {
+        body: {
+          userId: selectedUser.id,
+          reason: blockReason,
+        },
+      });
 
       if (error) throw error;
-
-      await logAdminAction('BLOCK_USER', selectedUser.id, {
-        reason: blockReason,
-        user_email: selectedUser.email
-      });
+      if (data?.error) throw new Error(data.error);
 
       toast.success(`User ${selectedUser.full_name} has been blocked`);
       setBlockDialogOpen(false);
@@ -171,7 +164,7 @@ const AdminPanel = () => {
       loadUsers();
       loadAdminActions();
     } catch (error: any) {
-      toast.error("Failed to block user");
+      toast.error(error.message || "Failed to block user");
       console.error(error);
     } finally {
       setActionLoading(false);
@@ -181,21 +174,14 @@ const AdminPanel = () => {
   const handleUnblockUser = async (user: User) => {
     setActionLoading(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          is_blocked: false,
-          blocked_at: null,
-          blocked_by: null,
-          block_reason: null
-        })
-        .eq('id', user.id);
+      const { data, error } = await supabase.functions.invoke('unblock-user', {
+        body: {
+          userId: user.id,
+        },
+      });
 
       if (error) throw error;
-
-      await logAdminAction('UNBLOCK_USER', user.id, {
-        user_email: user.email
-      });
+      if (data?.error) throw new Error(data.error);
 
       toast.success(`User ${user.full_name} has been unblocked`);
       loadUsers();
