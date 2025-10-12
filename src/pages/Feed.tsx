@@ -98,7 +98,35 @@ const Feed = () => {
         variant: "destructive",
       });
     } else if (data) {
-      setPosts(data);
+      // Fetch author profiles in a single batched query
+      const userIds = Array.from(new Set(data.map((p) => p.user_id).filter(Boolean)));
+      let profileMap: Record<string, any> = {};
+
+      if (userIds.length > 0) {
+        const { data: profileRows, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, full_name, profile_photo_url")
+          .in("id", userIds);
+
+        if (profilesError) {
+          console.error("Error loading profiles for posts:", profilesError);
+        } else if (profileRows) {
+          profileMap = Object.fromEntries(profileRows.map((r) => [r.id, r]));
+        }
+      }
+
+      // Build a domain map from already loaded domains
+      const domainMap: Record<string, { name: string; icon: string | null }> = Object.fromEntries(
+        (domains || []).map((d: any) => [d.id, { name: d.name, icon: d.icon }])
+      );
+
+      const enriched = data.map((p) => ({
+        ...p,
+        profiles: p.user_id ? profileMap[p.user_id] ?? null : null,
+        domains: p.domain_id ? domainMap[p.domain_id] ?? null : null,
+      }));
+
+      setPosts(enriched);
     }
     
     setLoading(false);
