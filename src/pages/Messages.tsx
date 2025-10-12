@@ -6,7 +6,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { MessageCircle, Send, ArrowLeft, Loader2, Search as SearchIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MessageCircle, Send, ArrowLeft, Loader2, Search as SearchIcon, AtSign, Mail } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -59,6 +61,8 @@ const Messages = () => {
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
+  const [messageFilter, setMessageFilter] = useState<"all" | "direct" | "mentions">("all");
+  const [conversationsWithMentions, setConversationsWithMentions] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -77,6 +81,7 @@ const Messages = () => {
   useEffect(() => {
     if (currentUserId) {
       loadConversations();
+      loadMentionedConversations();
       
       const conversationId = searchParams.get("conversation");
       if (conversationId) {
@@ -145,6 +150,34 @@ const Messages = () => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const loadMentionedConversations = async () => {
+    if (!currentUserId) return;
+    
+    try {
+      // Get all messages where user is mentioned
+      const { data: mentions } = await supabase
+        .from('message_mentions')
+        .select('message_id')
+        .eq('mentioned_user_id', currentUserId);
+
+      if (!mentions || mentions.length === 0) return;
+
+      // Get conversation IDs for these messages
+      const messageIds = mentions.map(m => m.message_id);
+      const { data: messages } = await supabase
+        .from('messages')
+        .select('conversation_id')
+        .in('id', messageIds);
+
+      if (messages) {
+        const convIds = new Set(messages.map(m => m.conversation_id));
+        setConversationsWithMentions(convIds);
+      }
+    } catch (error) {
+      console.error('Error loading mentioned conversations:', error);
+    }
   };
 
   const loadConversations = async () => {
@@ -406,6 +439,20 @@ const Messages = () => {
     return date.toLocaleDateString();
   };
 
+  const getFilteredConversations = () => {
+    let filtered = conversations.filter(conv =>
+      conv.other_user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      conv.last_message?.content.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    if (messageFilter === "mentions") {
+      filtered = filtered.filter(conv => conversationsWithMentions.has(conv.id));
+    }
+    // "direct" and "all" show the same conversations (all are direct messages)
+    
+    return filtered;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -430,6 +477,27 @@ const Messages = () => {
                     <UserMenu />
                   </div>
                 </div>
+                <Tabs value={messageFilter} onValueChange={(v) => setMessageFilter(v as any)} className="w-full mb-3">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="all" className="flex items-center gap-2">
+                      <MessageCircle className="h-4 w-4" />
+                      All
+                    </TabsTrigger>
+                    <TabsTrigger value="direct" className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      Direct
+                    </TabsTrigger>
+                    <TabsTrigger value="mentions" className="flex items-center gap-2">
+                      <AtSign className="h-4 w-4" />
+                      Mentions
+                      {conversationsWithMentions.size > 0 && (
+                        <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                          {conversationsWithMentions.size}
+                        </Badge>
+                      )}
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
                 <div className="relative">
                   <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -455,42 +523,57 @@ const Messages = () => {
                 </Card>
               ) : (
                 <div className="space-y-2">
-                  {conversations
-                    .filter(conv => 
-                      conv.other_user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                      conv.last_message?.content.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((conv) => (
-                    <Card
-                      key={conv.id}
-                      className="cursor-pointer hover-lift"
-                      onClick={() => setSelectedConversation(conv.id)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          <Avatar className="h-12 w-12">
-                            <AvatarImage src={conv.other_user.profile_photo_url || ""} />
-                            <AvatarFallback className="bg-primary text-primary-foreground">
-                              {getInitials(conv.other_user.full_name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold">{conv.other_user.full_name}</h3>
+                  {getFilteredConversations().map((conv) => {
+                    const hasMentions = conversationsWithMentions.has(conv.id);
+                    return (
+                      <Card
+                        key={conv.id}
+                        className={`cursor-pointer hover-lift ${
+                          hasMentions ? 'border-primary/50 bg-primary/5' : ''
+                        }`}
+                        onClick={() => setSelectedConversation(conv.id)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-3">
+                            <div className="relative">
+                              <Avatar className="h-12 w-12">
+                                <AvatarImage src={conv.other_user.profile_photo_url || ""} />
+                                <AvatarFallback className="bg-primary text-primary-foreground">
+                                  {getInitials(conv.other_user.full_name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              {hasMentions && (
+                                <div className="absolute -top-1 -right-1 h-5 w-5 bg-primary rounded-full flex items-center justify-center">
+                                  <AtSign className="h-3 w-3 text-primary-foreground" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold">{conv.other_user.full_name}</h3>
+                                {hasMentions && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    <AtSign className="h-3 w-3 mr-1" />
+                                    Mentioned you
+                                  </Badge>
+                                )}
+                              </div>
+                              {conv.last_message && (
+                                <p className="text-sm text-muted-foreground truncate">
+                                  {conv.last_message.content}
+                                </p>
+                              )}
+                            </div>
                             {conv.last_message && (
-                              <p className="text-sm text-muted-foreground truncate">
-                                {conv.last_message.content}
-                              </p>
+                              <span className="text-xs text-muted-foreground">
+                                {formatTime(conv.last_message.created_at)}
+                              </span>
                             )}
                           </div>
-                          {conv.last_message && (
-                            <span className="text-xs text-muted-foreground">
-                              {formatTime(conv.last_message.created_at)}
-                            </span>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </main>
@@ -625,8 +708,29 @@ const Messages = () => {
           <div className="grid grid-cols-3 gap-4 h-[calc(100vh-140px)]">
             {/* Conversations list */}
             <div className="border rounded-lg overflow-hidden flex flex-col">
-              <div className="bg-muted p-3 border-b">
-                <h2 className="font-semibold mb-3">Conversations</h2>
+              <div className="bg-muted p-3 border-b space-y-3">
+                <h2 className="font-semibold">Conversations</h2>
+                <Tabs value={messageFilter} onValueChange={(v) => setMessageFilter(v as any)} className="w-full">
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="all" className="flex items-center gap-1 text-xs">
+                      <MessageCircle className="h-3 w-3" />
+                      All
+                    </TabsTrigger>
+                    <TabsTrigger value="direct" className="flex items-center gap-1 text-xs">
+                      <Mail className="h-3 w-3" />
+                      Direct
+                    </TabsTrigger>
+                    <TabsTrigger value="mentions" className="flex items-center gap-1 text-xs">
+                      <AtSign className="h-3 w-3" />
+                      Mentions
+                      {conversationsWithMentions.size > 0 && (
+                        <Badge variant="destructive" className="ml-1 h-4 w-4 p-0 flex items-center justify-center text-[10px]">
+                          {conversationsWithMentions.size}
+                        </Badge>
+                      )}
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
                 <div className="relative">
                   <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -644,28 +748,41 @@ const Messages = () => {
                     <p className="text-sm">No conversations yet</p>
                   </div>
             ) : (
-              conversations
-                .filter(conv => 
-                  conv.other_user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                  conv.last_message?.content.toLowerCase().includes(searchQuery.toLowerCase())
-                )
-                .map((conv) => (
+              getFilteredConversations().map((conv) => {
+                const hasMentions = conversationsWithMentions.has(conv.id);
+                return (
                     <div
                       key={conv.id}
-                      className={`p-4 cursor-pointer border-b hover:bg-accent transition-colors ${
-                        selectedConversation === conv.id ? 'bg-accent' : ''
+                      className={`p-4 cursor-pointer border-b transition-colors ${
+                        selectedConversation === conv.id 
+                          ? 'bg-accent' 
+                          : hasMentions 
+                          ? 'bg-primary/5 hover:bg-primary/10' 
+                          : 'hover:bg-accent'
                       }`}
                       onClick={() => setSelectedConversation(conv.id)}
                     >
                       <div className="flex items-start gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={conv.other_user.profile_photo_url || ""} />
-                          <AvatarFallback className="bg-primary text-primary-foreground">
-                            {getInitials(conv.other_user.full_name)}
-                          </AvatarFallback>
-                        </Avatar>
+                        <div className="relative">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={conv.other_user.profile_photo_url || ""} />
+                            <AvatarFallback className="bg-primary text-primary-foreground">
+                              {getInitials(conv.other_user.full_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          {hasMentions && (
+                            <div className="absolute -top-1 -right-1 h-4 w-4 bg-primary rounded-full flex items-center justify-center">
+                              <AtSign className="h-2.5 w-2.5 text-primary-foreground" />
+                            </div>
+                          )}
+                        </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm">{conv.other_user.full_name}</h3>
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-semibold text-sm">{conv.other_user.full_name}</h3>
+                            {hasMentions && (
+                              <AtSign className="h-3 w-3 text-primary" />
+                            )}
+                          </div>
                           {conv.last_message && (
                             <p className="text-xs text-muted-foreground truncate">
                               {conv.last_message.content}
@@ -674,8 +791,9 @@ const Messages = () => {
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
+                  );
+                })
+              )}
               </div>
             </div>
 
