@@ -88,8 +88,19 @@ const Feed = () => {
       }
     }
 
-    const { data } = await query;
-    if (data) setPosts(data);
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error("Error loading posts:", error);
+      toast({
+        title: "Error loading posts",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else if (data) {
+      setPosts(data);
+    }
+    
     setLoading(false);
   };
 
