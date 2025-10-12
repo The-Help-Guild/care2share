@@ -28,8 +28,8 @@ export const checkRateLimit = async (
   
   if (error) {
     console.error('Rate limit check error:', error);
-    // On error, allow the action but log the error
-    return { allowed: true };
+    // On error, DENY the action for security
+    return { allowed: false, remainingTime: limit.windowSeconds };
   }
   
   if ((count ?? 0) >= limit.max) {
