@@ -16,6 +16,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { formatDistanceToNow } from "date-fns";
+import { z } from "zod";
+import DOMPurify from "dompurify";
 
 const Feed = () => {
   const [searchParams] = useSearchParams();
@@ -90,40 +92,71 @@ const Feed = () => {
     setLoading(false);
   };
 
-  const handleCreatePost = async () => {
-    if (!newPost.title.trim() || !newPost.content.trim()) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
-      return;
-    }
+  const postSchema = z.object({
+    title: z.string()
+      .trim()
+      .min(3, "Title must be at least 3 characters")
+      .max(200, "Title must be less than 200 characters")
+      .refine(val => !val.includes('<script'), "Invalid characters in title"),
+    content: z.string()
+      .trim()
+      .min(10, "Content must be at least 10 characters")
+      .max(5000, "Content must be less than 5000 characters"),
+    domain_id: z.string().uuid().optional()
+  });
 
-    const { error } = await supabase
-      .from("posts")
-      .insert({
-        title: newPost.title,
-        content: newPost.content,
-        domain_id: newPost.domain_id || null,
+  const handleCreatePost = async () => {
+    if (!currentUser) return;
+    
+    try {
+      // Sanitize inputs (strip any HTML)
+      const sanitizedTitle = DOMPurify.sanitize(newPost.title.trim(), {
+        ALLOWED_TAGS: [],
+        ALLOWED_ATTR: []
+      });
+      const sanitizedContent = DOMPurify.sanitize(newPost.content.trim(), {
+        ALLOWED_TAGS: [],
+        ALLOWED_ATTR: []
+      });
+
+      // Validate with zod
+      const validated = postSchema.parse({
+        title: sanitizedTitle,
+        content: sanitizedContent,
+        domain_id: newPost.domain_id || undefined
+      });
+
+      const { error } = await supabase.from("posts").insert({
+        title: validated.title,
+        content: validated.content,
+        domain_id: validated.domain_id || null,
         user_id: currentUser.id,
       });
 
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create post",
-        variant: "destructive",
-      });
-      return;
-    }
+      if (error) throw error;
 
-    toast({
-      description: "Post created successfully!",
-    });
-    setIsCreateDialogOpen(false);
-    setNewPost({ title: "", content: "", domain_id: "" });
-    loadPosts();
+      toast({
+        description: "Post created successfully!",
+      });
+      
+      setNewPost({ title: "", content: "", domain_id: "" });
+      setIsCreateDialogOpen(false);
+      loadPosts();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create post",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const getInitials = (name: string) => {

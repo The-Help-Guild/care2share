@@ -157,6 +157,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "expertise_tags_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       hobby_tags: {
@@ -184,6 +191,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hobby_tags_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -355,6 +369,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_domains_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -596,7 +617,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_profiles: {
+        Row: {
+          bio: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string | null
+          is_blocked: boolean | null
+          location: string | null
+          profile_photo_url: string | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_blocked?: boolean | null
+          location?: string | null
+          profile_photo_url?: string | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_blocked?: boolean | null
+          location?: string | null
+          profile_photo_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       bootstrap_admin: {
@@ -610,6 +660,22 @@ export type Database = {
       clean_old_typing_indicators: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      get_profile_safe: {
+        Args: { profile_id: string }
+        Returns: {
+          bio: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          is_blocked: boolean
+          latitude: number
+          location: string
+          longitude: number
+          profile_photo_url: string
+          resume_url: string
+        }[]
       }
       get_user_role: {
         Args: { _user_id: string }
