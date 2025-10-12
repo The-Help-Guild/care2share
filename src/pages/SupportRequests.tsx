@@ -77,6 +77,15 @@ const SupportRequests = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Read category from URL params if present
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const categoryParam = params.get('category');
+    if (categoryParam && CATEGORIES.includes(categoryParam as any)) {
+      setCategoryFilter(categoryParam);
+    }
+  }, []);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -507,7 +516,7 @@ const SupportRequests = () => {
                   <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleCreateRequest} disabled={submitting}>
+                  <Button onClick={handleCreateRequest} disabled={submitting || !newCategory}>
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Request"}
                   </Button>
                 </DialogFooter>

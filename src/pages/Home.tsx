@@ -286,11 +286,11 @@ const Home = () => {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {["Web Development", "Graphic Design", "Home Repair", "Life Coaching"].map((skill) => (
+            {["Technical Support", "Mentorship", "Skills Exchange", "Career Guidance"].map((skill) => (
               <Card
                 key={skill}
                 className="cursor-pointer hover-lift"
-                onClick={() => navigate(`/search?q=${encodeURIComponent(skill)}`)}
+                onClick={() => navigate(`/support?category=${encodeURIComponent(skill)}`)}
               >
                 <CardContent className="p-4 text-center">
                   <p className="font-medium">{skill}</p>
