@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { MessageSquare, Plus, Search, Clock, CheckCircle, AlertCircle, Filter, Send, Loader2, Trash2 } from "lucide-react";
+import { MessageSquare, Plus, Search, Clock, CheckCircle, AlertCircle, Filter, Send, Loader2, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -109,6 +109,8 @@ const SupportRequests = () => {
   const [newDescription, setNewDescription] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [replyContent, setReplyContent] = useState("");
+  const [editingReply, setEditingReply] = useState<Reply | null>(null);
+  const [isEditReplyDialogOpen, setIsEditReplyDialogOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -358,6 +360,42 @@ const SupportRequests = () => {
     } catch (error) {
       console.error("Error deleting reply:", error);
       toast.error("Failed to delete reply");
+    }
+  };
+
+  const handleEditReply = async () => {
+    if (!userId || !editingReply) return;
+
+    try {
+      setSubmitting(true);
+      
+      const validated = replySchema.parse({
+        content: sanitizeInput(editingReply.content.trim())
+      });
+
+      const { error } = await supabase
+        .from("support_request_replies")
+        .update({ content: validated.content })
+        .eq("id", editingReply.id)
+        .eq("user_id", userId);
+
+      if (error) throw error;
+
+      toast.success("Reply updated");
+      setIsEditReplyDialogOpen(false);
+      setEditingReply(null);
+      if (selectedRequest) {
+        loadReplies(selectedRequest.id);
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast.error(error.errors[0].message);
+      } else {
+        console.error("Error updating reply:", error);
+        toast.error("Failed to update reply");
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -718,29 +756,44 @@ const SupportRequests = () => {
                               <span className="text-sm font-medium">{reply.profiles.full_name}</span>
                               <span className="text-xs text-muted-foreground">{formatDate(reply.created_at)}</span>
                             </div>
-                            {isAdmin && (
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                                    <Trash2 className="h-3 w-3 text-destructive" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Reply</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to delete this reply? This action cannot be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleDeleteReply(reply.id)}>
-                                      Delete
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            )}
+                            <div className="flex items-center gap-1">
+                              {userId === reply.user_id && (
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="h-6 w-6"
+                                  onClick={() => {
+                                    setEditingReply(reply);
+                                    setIsEditReplyDialogOpen(true);
+                                  }}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                              )}
+                              {isAdmin && (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                                      <Trash2 className="h-3 w-3 text-destructive" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Delete Reply</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete this reply? This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleDeleteReply(reply.id)}>
+                                        Delete
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              )}
+                            </div>
                           </div>
                           <p className="text-sm whitespace-pre-wrap">{reply.content}</p>
                         </div>
@@ -781,6 +834,48 @@ const SupportRequests = () => {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Reply Dialog */}
+      <Dialog open={isEditReplyDialogOpen} onOpenChange={setIsEditReplyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Reply</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="relative">
+              <Textarea
+                value={editingReply?.content || ""}
+                onChange={(e) => setEditingReply(editingReply ? { ...editingReply, content: e.target.value } : null)}
+                placeholder="Edit your reply..."
+                rows={5}
+                maxLength={2000}
+                className="pr-12"
+              />
+              <div className="absolute bottom-2 right-2">
+                <EmojiPickerComponent
+                  onEmojiSelect={(emoji) => 
+                    setEditingReply(editingReply ? { ...editingReply, content: editingReply.content + emoji } : null)
+                  }
+                />
+              </div>
+            </div>
+            <Button 
+              onClick={handleEditReply} 
+              disabled={submitting || !editingReply?.content.trim()}
+              className="w-full"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update Reply"
+              )}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

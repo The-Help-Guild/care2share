@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquare, Plus, Trash2 } from "lucide-react";
+import { MessageSquare, Plus, Trash2, Pencil } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -41,6 +41,8 @@ const Feed = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [newPost, setNewPost] = useState({ title: "", content: "", domain_id: "" });
+  const [editingPost, setEditingPost] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { isAdmin } = useAdmin();
 
@@ -241,6 +243,61 @@ const Feed = () => {
     }
   };
 
+  const handleEditPost = async () => {
+    if (!currentUser || !editingPost) return;
+    
+    try {
+      const sanitizedTitle = DOMPurify.sanitize(editingPost.title.trim(), {
+        ALLOWED_TAGS: [],
+        ALLOWED_ATTR: []
+      });
+      const sanitizedContent = DOMPurify.sanitize(editingPost.content.trim(), {
+        ALLOWED_TAGS: [],
+        ALLOWED_ATTR: []
+      });
+
+      const validated = postSchema.parse({
+        title: sanitizedTitle,
+        content: sanitizedContent,
+        domain_id: editingPost.domain_id || undefined
+      });
+
+      const { error } = await supabase
+        .from("posts")
+        .update({
+          title: validated.title,
+          content: validated.content,
+          domain_id: validated.domain_id || null,
+        })
+        .eq("id", editingPost.id)
+        .eq("user_id", currentUser.id);
+
+      if (error) throw error;
+
+      toast({
+        description: "Post updated successfully!",
+      });
+      
+      setIsEditDialogOpen(false);
+      setEditingPost(null);
+      loadPosts();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update post",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -401,29 +458,44 @@ const Feed = () => {
                     </div>
                     <CardTitle className="text-lg mt-2">{post.title}</CardTitle>
                   </div>
-                  {isAdmin && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="ml-auto">
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete Post</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Are you sure you want to delete this post? This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDeletePost(post.id)}>
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
+                  <div className="flex items-center gap-1 ml-auto">
+                    {currentUser?.id === post.user_id && (
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPost(post);
+                          setIsEditDialogOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    )}
+                    {isAdmin && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Post</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to delete this post? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeletePost(post.id)}>
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
@@ -433,6 +505,75 @@ const Feed = () => {
           ))
         )}
       </main>
+
+      {/* Edit Post Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Post</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Title</label>
+              <div className="flex gap-2">
+                <Input
+                  value={editingPost?.title || ""}
+                  onChange={(e) => setEditingPost({ ...editingPost, title: e.target.value })}
+                  placeholder="Enter post title"
+                  className="flex-1"
+                />
+                <EmojiPickerComponent
+                  onEmojiSelect={(emoji) =>
+                    setEditingPost({ ...editingPost, title: (editingPost?.title || "") + emoji })
+                  }
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Content</label>
+              <div className="relative">
+                <Textarea
+                  value={editingPost?.content || ""}
+                  onChange={(e) => setEditingPost({ ...editingPost, content: e.target.value })}
+                  placeholder="Share your thoughts..."
+                  rows={5}
+                  className="pr-12"
+                />
+                <div className="absolute bottom-2 right-2">
+                  <EmojiPickerComponent
+                    onEmojiSelect={(emoji) =>
+                      setEditingPost({ ...editingPost, content: (editingPost?.content || "") + emoji })
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Domain (Optional)</label>
+              <Select 
+                value={editingPost?.domain_id || "none"} 
+                onValueChange={(value) => setEditingPost({ ...editingPost, domain_id: value === "none" ? "" : value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a domain" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Domain</SelectItem>
+                  {domains.map((domain) => (
+                    <SelectItem key={domain.id} value={domain.id}>
+                      {domain.icon && <span className="mr-2">{domain.icon}</span>}
+                      {domain.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleEditPost} className="w-full">
+              Update Post
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <BottomNav />
     </div>
