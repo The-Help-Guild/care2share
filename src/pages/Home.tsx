@@ -20,6 +20,7 @@ const Home = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [recentProfiles, setRecentProfiles] = useState<any[]>([]);
   const [supportRequests, setSupportRequests] = useState<any[]>([]);
+  const [domains, setDomains] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -88,9 +89,19 @@ const Home = () => {
       if (data) setSupportRequests(data);
     };
 
+    const loadDomains = async () => {
+      const { data } = await supabase
+        .from("domains")
+        .select("*")
+        .order("name", { ascending: true });
+
+      if (data) setDomains(data);
+    };
+
     checkAuth();
     loadRecentProfiles();
     loadSupportRequests();
+    loadDomains();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
@@ -282,7 +293,38 @@ const Home = () => {
         <section>
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="h-5 w-5 text-accent" />
-            <h2 className="text-xl font-semibold">Trending Skills</h2>
+            <h2 className="text-xl font-semibold">Explore All Domains</h2>
+            <Badge variant="secondary" className="ml-auto">{domains.length} Available</Badge>
+          </div>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {domains.map((domain) => (
+              <Button
+                key={domain.id}
+                variant="outline"
+                className="h-auto py-4 px-4 flex flex-col items-center gap-2 hover-lift"
+                onClick={() => navigate(`/search?domains=${encodeURIComponent(domain.name)}`)}
+              >
+                {domain.icon && <span className="text-2xl">{domain.icon}</span>}
+                <span className="font-medium text-center text-sm">{domain.name}</span>
+              </Button>
+            ))}
+          </div>
+
+          {domains.length === 0 && (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <TrendingUp className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">No domains available yet</p>
+              </CardContent>
+            </Card>
+          )}
+        </section>
+
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <MessageSquare className="h-5 w-5 text-accent" />
+            <h2 className="text-xl font-semibold">Popular Categories</h2>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
