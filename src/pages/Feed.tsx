@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageSquare, Plus } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
@@ -92,7 +92,11 @@ const Feed = () => {
 
   const handleCreatePost = async () => {
     if (!newPost.title.trim() || !newPost.content.trim()) {
-      toast.error("Please fill in all fields");
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -106,11 +110,17 @@ const Feed = () => {
       });
 
     if (error) {
-      toast.error("Failed to create post");
+      toast({
+        title: "Error",
+        description: "Failed to create post",
+        variant: "destructive",
+      });
       return;
     }
 
-    toast.success("Post created successfully!");
+    toast({
+      description: "Post created successfully!",
+    });
     setIsCreateDialogOpen(false);
     setNewPost({ title: "", content: "", domain_id: "" });
     loadPosts();
