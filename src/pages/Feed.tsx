@@ -76,7 +76,7 @@ const Feed = () => {
       .from("posts")
       .select(`
         *,
-        profiles!posts_user_id_fkey(full_name, profile_photo_url),
+        profiles(full_name, profile_photo_url),
         domains(name, icon)
       `)
       .order("created_at", { ascending: false });
