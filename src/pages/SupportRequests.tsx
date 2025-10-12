@@ -20,6 +20,7 @@ import { StartConversationButton } from "@/components/StartConversationButton";
 import { z } from "zod";
 import { CATEGORIES } from "@/lib/constants";
 import DOMPurify from "dompurify";
+import { EmojiPickerComponent } from "@/components/EmojiPicker";
 
 const requestSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters").max(200, "Title too long"),
@@ -473,12 +474,18 @@ const SupportRequests = () => {
                 <div className="space-y-4 mt-4">
                   <div>
                     <label className="text-sm font-medium mb-2 block">Title</label>
-                    <Input
-                      value={newTitle}
-                      onChange={(e) => setNewTitle(e.target.value)}
-                      placeholder="Brief description of your request"
-                      maxLength={200}
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        value={newTitle}
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        placeholder="Brief description of your request"
+                        maxLength={200}
+                        className="flex-1"
+                      />
+                      <EmojiPickerComponent
+                        onEmojiSelect={(emoji) => setNewTitle(newTitle + emoji)}
+                      />
+                    </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {newTitle.length}/200 characters
                     </p>
@@ -500,13 +507,21 @@ const SupportRequests = () => {
                   
                   <div>
                     <label className="text-sm font-medium mb-2 block">Description</label>
-                    <Textarea
-                      value={newDescription}
-                      onChange={(e) => setNewDescription(e.target.value)}
-                      placeholder="Provide details about what you need help with..."
-                      rows={6}
-                      maxLength={5000}
-                    />
+                    <div className="relative">
+                      <Textarea
+                        value={newDescription}
+                        onChange={(e) => setNewDescription(e.target.value)}
+                        placeholder="Provide details about what you need help with..."
+                        rows={6}
+                        maxLength={5000}
+                        className="pr-12"
+                      />
+                      <div className="absolute bottom-2 right-2">
+                        <EmojiPickerComponent
+                          onEmojiSelect={(emoji) => setNewDescription(newDescription + emoji)}
+                        />
+                      </div>
+                    </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       {newDescription.length}/5000 characters
                     </p>
@@ -677,13 +692,21 @@ const SupportRequests = () => {
                 )}
 
                 <div className="flex gap-2 mt-4">
-                  <Textarea
-                    value={replyContent}
-                    onChange={(e) => setReplyContent(e.target.value)}
-                    placeholder="Write your reply..."
-                    rows={3}
-                    maxLength={2000}
-                  />
+                  <div className="flex-1 relative">
+                    <Textarea
+                      value={replyContent}
+                      onChange={(e) => setReplyContent(e.target.value)}
+                      placeholder="Write your reply..."
+                      rows={3}
+                      maxLength={2000}
+                      className="pr-12"
+                    />
+                    <div className="absolute bottom-2 right-2">
+                      <EmojiPickerComponent
+                        onEmojiSelect={(emoji) => setReplyContent(replyContent + emoji)}
+                      />
+                    </div>
+                  </div>
                   <Button 
                     onClick={handleReply} 
                     disabled={submitting || !replyContent.trim()}

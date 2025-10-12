@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import imageCompression from "browser-image-compression";
+import { EmojiPickerComponent } from "@/components/EmojiPicker";
 
 const EditProfile = () => {
   const navigate = useNavigate();
@@ -398,14 +399,22 @@ const EditProfile = () => {
 
             <div>
               <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder="Tell us about yourself..."
-                maxLength={1000}
-                rows={5}
-              />
+              <div className="relative">
+                <Textarea
+                  id="bio"
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Tell us about yourself..."
+                  maxLength={1000}
+                  rows={5}
+                  className="pr-12"
+                />
+                <div className="absolute bottom-2 right-2">
+                  <EmojiPickerComponent
+                    onEmojiSelect={(emoji) => setBio(bio + emoji)}
+                  />
+                </div>
+              </div>
               <p className="text-xs text-muted-foreground mt-1">
                 {bio.length}/1000 characters
               </p>

@@ -18,6 +18,7 @@ import { MentionInput } from "@/components/MentionInput";
 import { extractMentions, createMentionNotification, saveMentions, createNewMessageNotification } from "@/lib/messageHelpers";
 import { z } from "zod";
 import DOMPurify from "dompurify";
+import { EmojiPickerComponent } from "@/components/EmojiPicker";
 
 const messageSchema = z.object({
   content: z.string()
@@ -872,13 +873,16 @@ const Messages = () => {
                   </div>
 
                   <div className="border-t p-4">
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-end">
                       <Input
                         value={newMessage}
                         onChange={handleTyping}
                         onKeyPress={(e) => e.key === 'Enter' && !sending && handleSendMessage()}
                         placeholder="Type a message..."
                         className="flex-1"
+                      />
+                      <EmojiPickerComponent
+                        onEmojiSelect={(emoji) => setNewMessage(newMessage + emoji)}
                       />
                       <Button
                         onClick={handleSendMessage}

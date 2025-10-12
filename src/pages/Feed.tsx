@@ -18,6 +18,7 @@ import { NotificationCenter } from "@/components/NotificationCenter";
 import { formatDistanceToNow } from "date-fns";
 import { z } from "zod";
 import DOMPurify from "dompurify";
+import { EmojiPickerComponent } from "@/components/EmojiPicker";
 
 const Feed = () => {
   const [searchParams] = useSearchParams();
@@ -222,20 +223,38 @@ const Feed = () => {
                 <div className="space-y-4 mt-4">
                   <div>
                     <label className="text-sm font-medium mb-2 block">Title</label>
-                    <Input
-                      value={newPost.title}
-                      onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-                      placeholder="Enter post title"
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        value={newPost.title}
+                        onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
+                        placeholder="Enter post title"
+                        className="flex-1"
+                      />
+                      <EmojiPickerComponent
+                        onEmojiSelect={(emoji) =>
+                          setNewPost({ ...newPost, title: newPost.title + emoji })
+                        }
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Content</label>
-                    <Textarea
-                      value={newPost.content}
-                      onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-                      placeholder="Share your thoughts..."
-                      rows={5}
-                    />
+                    <div className="relative">
+                      <Textarea
+                        value={newPost.content}
+                        onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
+                        placeholder="Share your thoughts..."
+                        rows={5}
+                        className="pr-12"
+                      />
+                      <div className="absolute bottom-2 right-2">
+                        <EmojiPickerComponent
+                          onEmojiSelect={(emoji) =>
+                            setNewPost({ ...newPost, content: newPost.content + emoji })
+                          }
+                        />
+                      </div>
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Domain (Optional)</label>
