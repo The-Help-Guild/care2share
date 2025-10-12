@@ -11,7 +11,18 @@ import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { MessageSquare, Plus, Search, Clock, CheckCircle, AlertCircle, Filter, Send, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { MessageSquare, Plus, Search, Clock, CheckCircle, AlertCircle, Filter, Send, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -21,6 +32,7 @@ import { z } from "zod";
 import { CATEGORIES } from "@/lib/constants";
 import DOMPurify from "dompurify";
 import { EmojiPickerComponent } from "@/components/EmojiPicker";
+import { useAdmin } from "@/hooks/useAdmin";
 
 const requestSchema = z.object({
   title: z.string().min(5, "Title must be at least 5 characters").max(200, "Title too long"),
@@ -78,6 +90,7 @@ const SupportRequests = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const { isAdmin } = useAdmin();
 
   // Read category from URL params if present
   useEffect(() => {
@@ -325,6 +338,26 @@ const SupportRequests = () => {
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Failed to update status");
+    }
+  };
+
+  const handleDeleteReply = async (replyId: string) => {
+    try {
+      const { error } = await supabase
+        .from("support_request_replies")
+        .delete()
+        .eq("id", replyId);
+
+      if (error) throw error;
+
+      toast.success("Reply deleted successfully");
+      if (selectedRequest) {
+        loadReplies(selectedRequest.id);
+        loadRequests(); // Refresh to update reply count
+      }
+    } catch (error) {
+      console.error("Error deleting reply:", error);
+      toast.error("Failed to delete reply");
     }
   };
 
@@ -680,9 +713,34 @@ const SupportRequests = () => {
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 bg-muted rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm font-medium">{reply.profiles.full_name}</span>
-                            <span className="text-xs text-muted-foreground">{formatDate(reply.created_at)}</span>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{reply.profiles.full_name}</span>
+                              <span className="text-xs text-muted-foreground">{formatDate(reply.created_at)}</span>
+                            </div>
+                            {isAdmin && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Reply</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete this reply? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteReply(reply.id)}>
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
                           </div>
                           <p className="text-sm whitespace-pre-wrap">{reply.content}</p>
                         </div>
