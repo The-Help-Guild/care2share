@@ -2,9 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface UserLocation {
@@ -14,6 +14,7 @@ interface UserLocation {
   latitude?: number | null;
   longitude?: number | null;
   profile_photo_url?: string;
+  profile_domains?: Array<{ domains: { name: string } }>;
 }
 
 interface UserMapProps {
@@ -25,6 +26,36 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
   const map = useRef<mapboxgl.Map | null>(null);
   const [geocodedUsers, setGeocodedUsers] = useState<UserLocation[]>([]);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const getUserId = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) setCurrentUserId(session.user.id);
+    };
+    getUserId();
+  }, []);
+
+  const handleContactUser = async (userId: string) => {
+    if (!currentUserId) {
+      toast.error("Please log in to contact users");
+      return;
+    }
+    
+    try {
+      const { data: convId, error } = await supabase.rpc('start_conversation' as any, {
+        target_user: userId,
+      });
+      
+      if (error) throw error;
+      navigate(`/messages?conversation=${convId}`);
+      toast.success("Opening conversation...");
+    } catch (error) {
+      console.error("Error starting conversation:", error);
+      toast.error("Failed to start conversation");
+    }
+  };
 
   // Geocode user locations
   useEffect(() => {
@@ -105,12 +136,54 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
         el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
         el.style.cursor = 'pointer';
 
-        const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(
-          `<div style="padding: 8px;">
-            <h3 style="font-weight: bold; margin-bottom: 4px;">${user.full_name}</h3>
-            <p style="font-size: 14px; color: #666;">${user.location}</p>
-          </div>`
-        );
+        const domains = user.profile_domains?.slice(0, 3).map(pd => pd.domains.name).join(', ') || 'No specialties listed';
+        const moreCount = user.profile_domains && user.profile_domains.length > 3 ? ` +${user.profile_domains.length - 3} more` : '';
+        
+        const popupContent = document.createElement('div');
+        popupContent.innerHTML = `
+          <div style="padding: 12px; min-width: 200px;">
+            <h3 style="font-weight: bold; margin-bottom: 8px; font-size: 16px;">${user.full_name}</h3>
+            <p style="font-size: 13px; color: #666; margin-bottom: 8px;">📍 ${user.location}</p>
+            <div style="background: #f3f4f6; padding: 8px; border-radius: 6px; margin-bottom: 10px;">
+              <p style="font-size: 12px; color: #374151; font-weight: 500;">Specialties:</p>
+              <p style="font-size: 12px; color: #6b7280; margin-top: 4px;">${domains}${moreCount}</p>
+            </div>
+            <button 
+              id="contact-${user.id}" 
+              style="
+                width: 100%;
+                background: hsl(221.2 83.2% 53.3%);
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 500;
+                font-size: 14px;
+                transition: background 0.2s;
+              "
+              onmouseover="this.style.background='hsl(221.2 83.2% 48%)'"
+              onmouseout="this.style.background='hsl(221.2 83.2% 53.3%)'"
+            >
+              💬 Contact ${user.full_name.split(' ')[0]}
+            </button>
+          </div>
+        `;
+
+        const popup = new mapboxgl.Popup({ offset: 25, maxWidth: '300px' })
+          .setDOMContent(popupContent);
+
+        // Add click event to contact button
+        popup.on('open', () => {
+          const contactBtn = document.getElementById(`contact-${user.id}`);
+          if (contactBtn && currentUserId !== user.id) {
+            contactBtn.addEventListener('click', () => handleContactUser(user.id));
+          } else if (contactBtn && currentUserId === user.id) {
+            contactBtn.textContent = "This is you!";
+            contactBtn.style.background = '#9ca3af';
+            contactBtn.style.cursor = 'not-allowed';
+          }
+        });
 
         new mapboxgl.Marker(el)
           .setLngLat([user.longitude, user.latitude])
@@ -118,7 +191,7 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
           .addTo(map.current);
       }
     });
-  }, [geocodedUsers]);
+  }, [geocodedUsers, currentUserId, navigate]);
 
   useEffect(() => {
     return () => {
