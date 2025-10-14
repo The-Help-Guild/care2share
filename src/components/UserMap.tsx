@@ -23,14 +23,11 @@ interface UserMapProps {
 const UserMap: React.FC<UserMapProps> = ({ users }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const [mapboxToken, setMapboxToken] = useState<string>('');
-  const [tokenInput, setTokenInput] = useState<string>('');
-  const [isTokenSet, setIsTokenSet] = useState(false);
 
-  const initializeMap = (token: string) => {
+  useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    mapboxgl.accessToken = token;
+    mapboxgl.accessToken = 'pk.eyJ1IjoicGl4ZWxzdG9wcm9maXQiLCJhIjoiY21ncWxsazVvMTJpcjJscXc5aWR6bzdoNSJ9._zmgx8h8bMR9Q2i8XpjAvw';
     
     map.current = new mapboxgl.Map({
       container: mapContainer.current,
@@ -76,19 +73,7 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
           .addTo(map.current);
       }
     });
-
-    setIsTokenSet(true);
-  };
-
-  const handleSetToken = () => {
-    if (!tokenInput.trim()) {
-      toast.error('Please enter a valid Mapbox token');
-      return;
-    }
-    setMapboxToken(tokenInput);
-    initializeMap(tokenInput);
-    toast.success('Map loaded successfully!');
-  };
+  }, [users]);
 
   useEffect(() => {
     return () => {
@@ -98,39 +83,6 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
       }
     };
   }, []);
-
-  if (!isTokenSet) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5 text-primary" />
-            Member Locations
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <p className="text-sm text-muted-foreground mb-4">
-              To view the location map, please enter your Mapbox public token. 
-              Get one at <a href="https://mapbox.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">mapbox.com</a>
-            </p>
-            <div className="flex gap-2">
-              <Input
-                type="text"
-                placeholder="Enter Mapbox public token (pk.xxx...)"
-                value={tokenInput}
-                onChange={(e) => setTokenInput(e.target.value)}
-                className="flex-1"
-              />
-              <Button onClick={handleSetToken}>
-                Load Map
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
