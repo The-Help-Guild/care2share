@@ -176,7 +176,7 @@ const Home = () => {
 
       <main className="max-w-6xl mx-auto p-4 space-y-8 animate-fade-in">
         <section>
-          <UserMap users={recentProfiles.filter(p => p.latitude && p.longitude)} />
+          <UserMap users={recentProfiles} />
         </section>
 
         <section>

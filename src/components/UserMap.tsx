@@ -11,8 +11,8 @@ interface UserLocation {
   id: string;
   full_name: string;
   location: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number | null;
+  longitude?: number | null;
   profile_photo_url?: string;
 }
 
@@ -23,9 +23,54 @@ interface UserMapProps {
 const UserMap: React.FC<UserMapProps> = ({ users }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
+  const [geocodedUsers, setGeocodedUsers] = useState<UserLocation[]>([]);
+  const [isGeocoding, setIsGeocoding] = useState(false);
+
+  // Geocode user locations
+  useEffect(() => {
+    const geocodeUsers = async () => {
+      if (users.length === 0) return;
+      
+      setIsGeocoding(true);
+      const MAPBOX_TOKEN = 'pk.eyJ1IjoicGl4ZWxzdG9wcm9maXQiLCJhIjoiY21ncWxsazVvMTJpcjJscXc5aWR6bzdoNSJ9._zmgx8h8bMR9Q2i8XpjAvw';
+      
+      const geocoded = await Promise.all(
+        users.map(async (user) => {
+          // If user already has coordinates, use them
+          if (user.latitude && user.longitude) {
+            return user;
+          }
+          
+          // Otherwise, geocode the location string
+          if (user.location) {
+            try {
+              const response = await fetch(
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(user.location + ', Netherlands')}.json?access_token=${MAPBOX_TOKEN}&limit=1`
+              );
+              const data = await response.json();
+              
+              if (data.features && data.features.length > 0) {
+                const [longitude, latitude] = data.features[0].center;
+                return { ...user, latitude, longitude };
+              }
+            } catch (error) {
+              console.error(`Failed to geocode ${user.location}:`, error);
+            }
+          }
+          
+          return user;
+        })
+      );
+      
+      setGeocodedUsers(geocoded.filter(u => u.latitude && u.longitude));
+      setIsGeocoding(false);
+    };
+    
+    geocodeUsers();
+  }, [users]);
 
   useEffect(() => {
-    if (!mapContainer.current || map.current) return;
+    if (!mapContainer.current || map.current || geocodedUsers.length === 0) return;
 
     mapboxgl.accessToken = 'pk.eyJ1IjoicGl4ZWxzdG9wcm9maXQiLCJhIjoiY21ncWxsazVvMTJpcjJscXc5aWR6bzdoNSJ9._zmgx8h8bMR9Q2i8XpjAvw';
     
@@ -43,8 +88,8 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
       'top-right'
     );
 
-    // Add markers for each user with valid coordinates
-    users.forEach((user) => {
+    // Add markers for each geocoded user
+    geocodedUsers.forEach((user) => {
       if (user.latitude && user.longitude && map.current) {
         const el = document.createElement('div');
         el.className = 'marker';
@@ -73,7 +118,7 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
           .addTo(map.current);
       }
     });
-  }, [users]);
+  }, [geocodedUsers]);
 
   useEffect(() => {
     return () => {
@@ -89,7 +134,7 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MapPin className="h-5 w-5 text-primary" />
-          Member Locations - {users.filter(u => u.latitude && u.longitude).length} visible
+          Member Locations - {isGeocoding ? 'Loading...' : `${geocodedUsers.length} visible`}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
