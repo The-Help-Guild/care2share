@@ -14,6 +14,7 @@ import UserMenu from "@/components/UserMenu";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { StartConversationButton } from "@/components/StartConversationButton";
 import { formatDistanceToNow } from "date-fns";
+import UserMap from "@/components/UserMap";
 
 const Home = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -57,6 +58,8 @@ const Home = () => {
           full_name,
           bio,
           location,
+          latitude,
+          longitude,
           profile_photo_url,
           created_at,
           profile_domains(
@@ -172,6 +175,10 @@ const Home = () => {
       </header>
 
       <main className="max-w-6xl mx-auto p-4 space-y-8 animate-fade-in">
+        <section>
+          <UserMap users={recentProfiles.filter(p => p.latitude && p.longitude)} />
+        </section>
+
         <section>
           <div className="flex items-center gap-2 mb-4">
             <Users className="h-5 w-5 text-primary" />
