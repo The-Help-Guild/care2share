@@ -373,7 +373,25 @@ const Messages = () => {
 
       setNewMessage("");
       setMentionedUserIds([]);
-      loadConversations();
+      
+      // Update the conversation list locally without reloading
+      setConversations(prev => {
+        const updated = prev.map(conv => {
+          if (conv.id === selectedConversation) {
+            return {
+              ...conv,
+              updated_at: new Date().toISOString(),
+              last_message: {
+                content: validated.content,
+                created_at: new Date().toISOString()
+              }
+            };
+          }
+          return conv;
+        });
+        // Sort by updated_at to move this conversation to the top
+        return updated.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast.error(error.errors[0].message);
