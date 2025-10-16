@@ -300,18 +300,21 @@ export type Database = {
           id: string
           mentioned_user_id: string
           message_id: string
+          read: boolean
         }
         Insert: {
           created_at?: string
           id?: string
           mentioned_user_id: string
           message_id: string
+          read?: boolean
         }
         Update: {
           created_at?: string
           id?: string
           mentioned_user_id?: string
           message_id?: string
+          read?: boolean
         }
         Relationships: [
           {
@@ -826,6 +829,10 @@ export type Database = {
       is_conversation_participant: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
+      }
+      start_conversation: {
+        Args: { target_user: string }
+        Returns: string
       }
     }
     Enums: {
