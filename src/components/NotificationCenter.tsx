@@ -43,13 +43,25 @@ export const NotificationCenter = () => {
     if (userId) {
       loadNotifications();
 
-      // Subscribe to new notifications
+      // Subscribe to new notifications and updates
       const channel = supabase
         .channel('notifications')
         .on(
           'postgres_changes',
           {
             event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`
+          },
+          () => {
+            loadNotifications();
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
             schema: 'public',
             table: 'notifications',
             filter: `user_id=eq.${userId}`
