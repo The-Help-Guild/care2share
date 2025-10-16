@@ -88,6 +88,27 @@ const Messages = () => {
       if (conversationId) {
         setSelectedConversation(conversationId);
       }
+
+      // Subscribe to mention changes for real-time updates
+      const mentionChannel = supabase
+        .channel('mention-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'message_mentions',
+            filter: `mentioned_user_id=eq.${currentUserId}`
+          },
+          () => {
+            loadMentionedConversations();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(mentionChannel);
+      };
     }
   }, [currentUserId, searchParams]);
 
@@ -157,13 +178,17 @@ const Messages = () => {
     if (!currentUserId) return;
     
     try {
-      // Get all messages where user is mentioned
+      // Get all UNREAD messages where user is mentioned
       const { data: mentions } = await supabase
         .from('message_mentions')
         .select('message_id')
-        .eq('mentioned_user_id', currentUserId);
+        .eq('mentioned_user_id', currentUserId)
+        .eq('read', false);
 
-      if (!mentions || mentions.length === 0) return;
+      if (!mentions || mentions.length === 0) {
+        setConversationsWithMentions(new Set());
+        return;
+      }
 
       // Get conversation IDs for these messages
       const messageIds = mentions.map(m => m.message_id);
@@ -272,6 +297,24 @@ const Messages = () => {
         .update({ read: true })
         .eq("conversation_id", conversationId)
         .neq("sender_id", currentUserId);
+
+      // Mark mentions in this conversation as read
+      if (currentUserId) {
+        // Get all message IDs in this conversation
+        const messageIds = data?.map(m => m.id) || [];
+        
+        if (messageIds.length > 0) {
+          await supabase
+            .from('message_mentions')
+            .update({ read: true })
+            .in('message_id', messageIds)
+            .eq('mentioned_user_id', currentUserId)
+            .eq('read', false);
+          
+          // Reload mention indicators
+          loadMentionedConversations();
+        }
+      }
     } catch (error) {
       console.error("Error loading messages:", error);
       toast.error("Failed to load messages");
