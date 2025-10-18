@@ -758,19 +758,19 @@ const Messages = () => {
                       {message.replied_message && (
                         <div
                           onClick={() => scrollToMessage(message.reply_to_id!)}
-                          className={`mb-2 p-2 rounded-lg border-l-2 cursor-pointer ${
+                          className={`mb-2 p-2 rounded-md border-l-4 cursor-pointer transition-colors hover:opacity-80 ${
                             message.sender_id === currentUserId
-                              ? 'bg-primary-foreground/10 border-primary-foreground/30'
-                              : 'bg-accent border-primary/30'
+                              ? 'bg-primary-foreground/20 border-primary-foreground'
+                              : 'bg-accent/50 border-primary'
                           }`}
                         >
-                          <p className={`text-xs font-semibold mb-1 ${
-                            message.sender_id === currentUserId ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                          <p className={`text-xs font-semibold mb-0.5 ${
+                            message.sender_id === currentUserId ? 'text-primary-foreground' : 'text-primary'
                           }`}>
                             {message.replied_message.sender_name}
                           </p>
                           <p className={`text-xs line-clamp-2 ${
-                            message.sender_id === currentUserId ? 'text-primary-foreground/60' : 'text-muted-foreground/80'
+                            message.sender_id === currentUserId ? 'text-primary-foreground/80' : 'text-foreground/80'
                           }`}>
                             {message.replied_message.content}
                           </p>
@@ -1034,19 +1034,19 @@ const Messages = () => {
                             {message.replied_message && (
                               <div
                                 onClick={() => scrollToMessage(message.reply_to_id!)}
-                                className={`mb-2 p-2 rounded-lg border-l-2 cursor-pointer ${
+                                className={`mb-2 p-2 rounded-md border-l-4 cursor-pointer transition-colors hover:opacity-80 ${
                                   message.sender_id === currentUserId
-                                    ? 'bg-primary-foreground/10 border-primary-foreground/30'
-                                    : 'bg-accent border-primary/30'
+                                    ? 'bg-primary-foreground/20 border-primary-foreground'
+                                    : 'bg-accent/50 border-primary'
                                 }`}
                               >
-                                <p className={`text-xs font-semibold mb-1 ${
-                                  message.sender_id === currentUserId ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                                <p className={`text-xs font-semibold mb-0.5 ${
+                                  message.sender_id === currentUserId ? 'text-primary-foreground' : 'text-primary'
                                 }`}>
                                   {message.replied_message.sender_name}
                                 </p>
                                 <p className={`text-xs line-clamp-2 ${
-                                  message.sender_id === currentUserId ? 'text-primary-foreground/60' : 'text-muted-foreground/80'
+                                  message.sender_id === currentUserId ? 'text-primary-foreground/80' : 'text-foreground/80'
                                 }`}>
                                   {message.replied_message.content}
                                 </p>
