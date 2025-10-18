@@ -439,6 +439,24 @@ const Messages = () => {
 
       if (error) throw error;
 
+      // Optimistically add to chat UI so it appears instantly
+      if (messageData) {
+        const enriched: any = { ...messageData };
+        if (messageData.reply_to_id && replyingTo) {
+          enriched.replied_message = {
+            id: replyingTo.id,
+            content: replyingTo.content,
+            sender_id: replyingTo.sender_id,
+            sender_name:
+              replyingTo.sender_id === currentUserId
+                ? 'You'
+                : (conversations.find(c => c.id === selectedConversation)?.other_user.full_name || 'Unknown')
+          };
+        }
+        setMessages(prev => [...prev, enriched]);
+        scrollToBottom();
+      }
+
       // Handle mentions
       if (mentionedUserIds.length > 0 && messageData) {
         await saveMentions(messageData.id, mentionedUserIds);
