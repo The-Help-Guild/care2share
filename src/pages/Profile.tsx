@@ -104,48 +104,15 @@ const Profile = () => {
         return;
       }
 
-      // Check if conversation already exists between these users
-      const { data: existingConversations } = await supabase
-        .from("conversation_participants")
-        .select("conversation_id")
-        .eq("user_id", currentUserId);
+      // Use secure RPC to start or fetch existing conversation
+      const { data: conversationId, error } = await supabase.rpc('start_conversation', {
+        target_user: id,
+      });
 
-      if (existingConversations) {
-        for (const conv of existingConversations) {
-          const { data: otherParticipants } = await supabase
-            .from("conversation_participants")
-            .select("user_id")
-            .eq("conversation_id", conv.conversation_id)
-            .neq("user_id", currentUserId);
-
-          if (otherParticipants?.some(p => p.user_id === id)) {
-            navigate(`/messages?conversation=${conv.conversation_id}`);
-            return;
-          }
-        }
-      }
-
-      // Create new conversation
-      const { data: newConversation, error: convError } = await supabase
-        .from("conversations")
-        .insert({})
-        .select()
-        .single();
-
-      if (convError) throw convError;
-
-      // Add both participants to the conversation
-      const { error: participantsError } = await supabase
-        .from("conversation_participants")
-        .insert([
-          { conversation_id: newConversation.id, user_id: currentUserId },
-          { conversation_id: newConversation.id, user_id: id }
-        ]);
-
-      if (participantsError) throw participantsError;
+      if (error) throw error;
 
       toast.success("Conversation started!");
-      navigate(`/messages?conversation=${newConversation.id}`);
+      navigate(`/messages?conversation=${conversationId}`);
     } catch (error: any) {
       toast.error("Failed to start conversation");
       console.error(error);
