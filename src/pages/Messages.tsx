@@ -139,6 +139,11 @@ const Messages = () => {
           async (payload) => {
             const newMessage = payload.new as any;
             
+            // Skip if this message was sent by current user (already added optimistically)
+            if (newMessage.sender_id === currentUserId) {
+              return;
+            }
+            
             // Enrich with reply data if applicable
             if (newMessage.reply_to_id) {
               const { data: repliedMsg } = await supabase
