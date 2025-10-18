@@ -183,6 +183,22 @@ const Messages = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const scrollToMessage = (messageId: string) => {
+    const element = messageRefs.current[messageId];
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Highlight the message briefly
+      element.style.backgroundColor = "var(--accent)";
+      setTimeout(() => {
+        element.style.backgroundColor = "";
+      }, 2000);
+    }
+  };
+
+  const handleReply = (message: Message) => {
+    setReplyingTo(message);
+  };
+
   const loadMentionedConversations = async () => {
     if (!currentUserId) return;
     
@@ -298,7 +314,38 @@ const Messages = () => {
         .order("created_at", { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+
+      // Enrich messages with replied message data
+      const enrichedMessages = await Promise.all(
+        (data || []).map(async (msg: any) => {
+          if (msg.reply_to_id) {
+            const { data: repliedMsg } = await supabase
+              .from("messages")
+              .select("id, content, sender_id")
+              .eq("id", msg.reply_to_id)
+              .single();
+
+            if (repliedMsg) {
+              const { data: senderProfile } = await supabase
+                .from("profiles")
+                .select("full_name")
+                .eq("id", repliedMsg.sender_id)
+                .single();
+
+              return {
+                ...msg,
+                replied_message: {
+                  ...repliedMsg,
+                  sender_name: senderProfile?.full_name || "Unknown"
+                }
+              };
+            }
+          }
+          return msg;
+        })
+      );
+
+      setMessages(enrichedMessages);
 
       // Mark messages as read
       await supabase
@@ -309,19 +356,22 @@ const Messages = () => {
 
       // Mark mentions in this conversation as read
       if (currentUserId) {
-        // Get all message IDs in this conversation
-        const messageIds = data?.map(m => m.id) || [];
+        const messageIds = data?.map((m: any) => m.id) || [];
         
         if (messageIds.length > 0) {
-          await supabase
+          const { error: mentionError } = await supabase
             .from('message_mentions')
             .update({ read: true })
             .in('message_id', messageIds)
             .eq('mentioned_user_id', currentUserId)
             .eq('read', false);
+
+          if (mentionError) {
+            console.error("Error marking mentions as read:", mentionError);
+          }
           
-          // Reload mention indicators
-          loadMentionedConversations();
+          // Force reload mention indicators
+          await loadMentionedConversations();
         }
       }
     } catch (error) {
@@ -357,7 +407,8 @@ const Messages = () => {
         .insert({
           conversation_id: selectedConversation,
           sender_id: currentUserId,
-          content: validated.content
+          content: validated.content,
+          reply_to_id: replyingTo?.id || null
         })
         .select()
         .single();
@@ -425,6 +476,7 @@ const Messages = () => {
 
       setNewMessage("");
       setMentionedUserIds([]);
+      setReplyingTo(null);
       
       // Update the conversation list locally without reloading
       setConversations(prev => {
@@ -682,37 +734,81 @@ const Messages = () => {
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.sender_id === currentUserId ? 'justify-end' : 'justify-start'}`}
+                  ref={(el) => messageRefs.current[message.id] = el}
+                  className={`flex ${message.sender_id === currentUserId ? 'justify-end' : 'justify-start'} group`}
                 >
-                  <div
-                     className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                       message.sender_id === currentUserId
-                         ? 'bg-primary text-primary-foreground'
-                         : 'bg-muted'
-                     }`}
-                   >
-                     <p 
-                       className="text-sm" 
-                       dangerouslySetInnerHTML={{ 
-                         __html: DOMPurify.sanitize(
-                           message.content.replace(
-                             /@(\w+)/g,
-                             '<span class="font-semibold">@$1</span>'
-                           ),
-                           { ALLOWED_TAGS: ['span'], ALLOWED_ATTR: ['class'] }
-                         )
-                       }}
-                     />
-                    <div className="flex items-center gap-2 mt-1">
-                      <p className={`text-xs ${
-                        message.sender_id === currentUserId ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                      }`}>
-                        {formatTime(message.created_at)}
-                      </p>
-                      {message.sender_id === currentUserId && message.read && (
-                        <span className="text-xs text-primary-foreground/70">✓✓</span>
+                  <div className="flex items-start gap-2 max-w-[70%]">
+                    {message.sender_id !== currentUserId && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleReply(message)}
+                      >
+                        <Reply className="h-3 w-3" />
+                      </Button>
+                    )}
+                    <div
+                      className={`rounded-2xl px-4 py-2 ${
+                        message.sender_id === currentUserId
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      }`}
+                    >
+                      {message.replied_message && (
+                        <div
+                          onClick={() => scrollToMessage(message.reply_to_id!)}
+                          className={`mb-2 p-2 rounded-lg border-l-2 cursor-pointer ${
+                            message.sender_id === currentUserId
+                              ? 'bg-primary-foreground/10 border-primary-foreground/30'
+                              : 'bg-accent border-primary/30'
+                          }`}
+                        >
+                          <p className={`text-xs font-semibold mb-1 ${
+                            message.sender_id === currentUserId ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                          }`}>
+                            {message.replied_message.sender_name}
+                          </p>
+                          <p className={`text-xs line-clamp-2 ${
+                            message.sender_id === currentUserId ? 'text-primary-foreground/60' : 'text-muted-foreground/80'
+                          }`}>
+                            {message.replied_message.content}
+                          </p>
+                        </div>
                       )}
+                      <p 
+                        className="text-sm" 
+                        dangerouslySetInnerHTML={{ 
+                          __html: DOMPurify.sanitize(
+                            message.content.replace(
+                              /@(\w+)/g,
+                              '<span class="font-semibold">@$1</span>'
+                            ),
+                            { ALLOWED_TAGS: ['span'], ALLOWED_ATTR: ['class'] }
+                          )
+                        }}
+                      />
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className={`text-xs ${
+                          message.sender_id === currentUserId ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                        }`}>
+                          {formatTime(message.created_at)}
+                        </p>
+                        {message.sender_id === currentUserId && message.read && (
+                          <span className="text-xs text-primary-foreground/70">✓✓</span>
+                        )}
+                      </div>
                     </div>
+                    {message.sender_id === currentUserId && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => handleReply(message)}
+                      >
+                        <Reply className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -731,32 +827,52 @@ const Messages = () => {
             </main>
 
              <div className="fixed bottom-16 left-0 right-0 bg-card border-t p-4">
-               <div className="max-w-4xl mx-auto flex gap-2">
-                 <MentionInput
-                   value={newMessage}
-                   onChange={(value) => {
-                     setNewMessage(value);
-                     handleTyping({ target: { value } } as React.ChangeEvent<HTMLInputElement>);
-                   }}
-                   onMentionSelect={(userId) => {
-                     setMentionedUserIds(prev => [...new Set([...prev, userId])]);
-                   }}
-                   onKeyDown={(e) => {
-                     if (e.key === 'Enter' && !e.shiftKey && !sending) {
-                       e.preventDefault();
-                       handleSendMessage();
-                     }
-                   }}
-                   placeholder="Type a message... (use @ to mention)"
-                   disabled={sending}
-                 />
-                 <Button
-                   onClick={handleSendMessage}
-                   disabled={!newMessage.trim() || sending}
-                   size="icon"
-                 >
-                   {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                 </Button>
+               <div className="max-w-4xl mx-auto">
+                 {replyingTo && (
+                   <div className="mb-2 p-2 bg-accent rounded-lg flex items-start justify-between">
+                     <div className="flex-1">
+                       <p className="text-xs font-semibold text-muted-foreground mb-1">
+                         Replying to {replyingTo.sender_id === currentUserId ? 'yourself' : conversations.find(c => c.id === selectedConversation)?.other_user.full_name}
+                       </p>
+                       <p className="text-sm line-clamp-1">{replyingTo.content}</p>
+                     </div>
+                     <Button
+                       variant="ghost"
+                       size="icon"
+                       className="h-6 w-6"
+                       onClick={() => setReplyingTo(null)}
+                     >
+                       <X className="h-3 w-3" />
+                     </Button>
+                   </div>
+                 )}
+                 <div className="flex gap-2">
+                   <MentionInput
+                     value={newMessage}
+                     onChange={(value) => {
+                       setNewMessage(value);
+                       handleTyping({ target: { value } } as React.ChangeEvent<HTMLInputElement>);
+                     }}
+                     onMentionSelect={(userId) => {
+                       setMentionedUserIds(prev => [...new Set([...prev, userId])]);
+                     }}
+                     onKeyDown={(e) => {
+                       if (e.key === 'Enter' && !e.shiftKey && !sending) {
+                         e.preventDefault();
+                         handleSendMessage();
+                       }
+                     }}
+                     placeholder="Type a message... (use @ to mention)"
+                     disabled={sending}
+                   />
+                   <Button
+                     onClick={handleSendMessage}
+                     disabled={!newMessage.trim() || sending}
+                     size="icon"
+                   >
+                     {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                   </Button>
+                 </div>
                </div>
              </div>
           </>
@@ -894,37 +1010,81 @@ const Messages = () => {
                     {messages.map((message) => (
                       <div
                         key={message.id}
-                        className={`flex ${message.sender_id === currentUserId ? 'justify-end' : 'justify-start'}`}
+                        ref={(el) => messageRefs.current[message.id] = el}
+                        className={`flex ${message.sender_id === currentUserId ? 'justify-end' : 'justify-start'} group`}
                       >
-                        <div
-                     className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                       message.sender_id === currentUserId
-                         ? 'bg-primary text-primary-foreground'
-                         : 'bg-muted'
-                     }`}
-                   >
-                     <p 
-                       className="text-sm" 
-                       dangerouslySetInnerHTML={{ 
-                         __html: DOMPurify.sanitize(
-                           message.content.replace(
-                             /@(\w+)/g,
-                             '<span class="font-semibold">@$1</span>'
-                           ),
-                           { ALLOWED_TAGS: ['span'], ALLOWED_ATTR: ['class'] }
-                         )
-                       }}
-                     />
-                          <div className="flex items-center gap-2 mt-1">
-                            <p className={`text-xs ${
-                              message.sender_id === currentUserId ? 'text-primary-foreground/70' : 'text-muted-foreground'
-                            }`}>
-                              {formatTime(message.created_at)}
-                            </p>
-                            {message.sender_id === currentUserId && message.read && (
-                              <span className="text-xs text-primary-foreground/70">✓✓</span>
+                        <div className="flex items-start gap-2 max-w-[70%]">
+                          {message.sender_id !== currentUserId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleReply(message)}
+                            >
+                              <Reply className="h-3 w-3" />
+                            </Button>
+                          )}
+                          <div
+                            className={`rounded-2xl px-4 py-2 ${
+                              message.sender_id === currentUserId
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted'
+                            }`}
+                          >
+                            {message.replied_message && (
+                              <div
+                                onClick={() => scrollToMessage(message.reply_to_id!)}
+                                className={`mb-2 p-2 rounded-lg border-l-2 cursor-pointer ${
+                                  message.sender_id === currentUserId
+                                    ? 'bg-primary-foreground/10 border-primary-foreground/30'
+                                    : 'bg-accent border-primary/30'
+                                }`}
+                              >
+                                <p className={`text-xs font-semibold mb-1 ${
+                                  message.sender_id === currentUserId ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                                }`}>
+                                  {message.replied_message.sender_name}
+                                </p>
+                                <p className={`text-xs line-clamp-2 ${
+                                  message.sender_id === currentUserId ? 'text-primary-foreground/60' : 'text-muted-foreground/80'
+                                }`}>
+                                  {message.replied_message.content}
+                                </p>
+                              </div>
                             )}
+                            <p 
+                              className="text-sm" 
+                              dangerouslySetInnerHTML={{ 
+                                __html: DOMPurify.sanitize(
+                                  message.content.replace(
+                                    /@(\w+)/g,
+                                    '<span class="font-semibold">@$1</span>'
+                                  ),
+                                  { ALLOWED_TAGS: ['span'], ALLOWED_ATTR: ['class'] }
+                                )
+                              }}
+                            />
+                            <div className="flex items-center gap-2 mt-1">
+                              <p className={`text-xs ${
+                                message.sender_id === currentUserId ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                              }`}>
+                                {formatTime(message.created_at)}
+                              </p>
+                              {message.sender_id === currentUserId && message.read && (
+                                <span className="text-xs text-primary-foreground/70">✓✓</span>
+                              )}
+                            </div>
                           </div>
+                          {message.sender_id === currentUserId && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleReply(message)}
+                            >
+                              <Reply className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -943,13 +1103,42 @@ const Messages = () => {
                   </div>
 
                   <div className="border-t p-4">
+                    {replyingTo && (
+                      <div className="mb-2 p-2 bg-accent rounded-lg flex items-start justify-between">
+                        <div className="flex-1">
+                          <p className="text-xs font-semibold text-muted-foreground mb-1">
+                            Replying to {replyingTo.sender_id === currentUserId ? 'yourself' : conversations.find(c => c.id === selectedConversation)?.other_user.full_name}
+                          </p>
+                          <p className="text-sm line-clamp-1">{replyingTo.content}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setReplyingTo(null)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
                     <div className="flex gap-2 items-end">
-                      <Input
+                      <MentionInput
                         value={newMessage}
-                        onChange={handleTyping}
-                        onKeyPress={(e) => e.key === 'Enter' && !sending && handleSendMessage()}
-                        placeholder="Type a message..."
-                        className="flex-1"
+                        onChange={(value) => {
+                          setNewMessage(value);
+                          handleTyping({ target: { value } } as React.ChangeEvent<HTMLInputElement>);
+                        }}
+                        onMentionSelect={(userId) => {
+                          setMentionedUserIds(prev => [...new Set([...prev, userId])]);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey && !sending) {
+                            e.preventDefault();
+                            handleSendMessage();
+                          }
+                        }}
+                        placeholder="Type a message... (use @ to mention)"
+                        disabled={sending}
                       />
                       <EmojiPickerComponent
                         onEmojiSelect={(emoji) => setNewMessage(newMessage + emoji)}
