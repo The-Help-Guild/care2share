@@ -27,12 +27,15 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
   const [geocodedUsers, setGeocodedUsers] = useState<UserLocation[]>([]);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     const getUserId = async () => {
+      setIsLoadingAuth(true);
       const { data: { session } } = await supabase.auth.getSession();
       if (session) setCurrentUserId(session.user.id);
+      setIsLoadingAuth(false);
     };
     getUserId();
   }, []);
@@ -101,7 +104,8 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
   }, [users]);
 
   useEffect(() => {
-    if (!mapContainer.current || map.current || geocodedUsers.length === 0) return;
+    // Don't initialize map until auth is loaded
+    if (!mapContainer.current || map.current || geocodedUsers.length === 0 || isLoadingAuth) return;
 
     mapboxgl.accessToken = 'pk.eyJ1IjoicGl4ZWxzdG9wcm9maXQiLCJhIjoiY21ncWxsazVvMTJpcjJscXc5aWR6bzdoNSJ9._zmgx8h8bMR9Q2i8XpjAvw';
     
@@ -191,7 +195,7 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
           .addTo(map.current);
       }
     });
-  }, [geocodedUsers, currentUserId, navigate]);
+  }, [geocodedUsers, currentUserId, navigate, isLoadingAuth]);
 
   useEffect(() => {
     return () => {
@@ -207,7 +211,7 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <MapPin className="h-5 w-5 text-primary" />
-          Member Locations - {isGeocoding ? 'Loading...' : `${geocodedUsers.length} visible`}
+          Member Locations - {isGeocoding || isLoadingAuth ? 'Loading...' : `${geocodedUsers.length} visible`}
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">

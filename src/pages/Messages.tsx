@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageCircle, Send, ArrowLeft, Loader2, Search as SearchIcon, AtSign, Mail } from "lucide-react";
+import { MessageCircle, Send, ArrowLeft, Loader2, Search as SearchIcon, AtSign, Mail, Reply, X } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -46,6 +46,13 @@ interface Message {
   content: string;
   created_at: string;
   read: boolean;
+  reply_to_id?: string | null;
+  replied_message?: {
+    id: string;
+    content: string;
+    sender_id: string;
+    sender_name?: string;
+  } | null;
 }
 
 const Messages = () => {
@@ -64,7 +71,9 @@ const Messages = () => {
   const [mentionedUserIds, setMentionedUserIds] = useState<string[]>([]);
   const [messageFilter, setMessageFilter] = useState<"all" | "direct" | "mentions">("all");
   const [conversationsWithMentions, setConversationsWithMentions] = useState<Set<string>>(new Set());
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
