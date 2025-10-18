@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import Map, { Marker, NavigationControl, GeolocateControl } from "react-map-gl";
+import mapboxgl from "mapbox-gl";
 import MapboxGeocoder from "@mapbox/mapbox-gl-geocoder";
 import "mapbox-gl/dist/mapbox-gl.css";
 import "@mapbox/mapbox-gl-geocoder/dist/mapbox-gl-geocoder.css";
@@ -25,89 +25,133 @@ export const MapboxLocationPicker = ({
   onChange,
   label = "Location",
 }: MapboxLocationPickerProps) => {
-  const mapRef = useRef<any>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<mapboxgl.Map | null>(null);
+  const markerRef = useRef<mapboxgl.Marker | null>(null);
   const geocoderContainerRef = useRef<HTMLDivElement>(null);
-  const [viewState, setViewState] = useState({
-    longitude: initialLocation?.longitude || -122.4194,
-    latitude: initialLocation?.latitude || 37.7749,
-    zoom: initialLocation ? 14 : 10,
-  });
-  const [marker, setMarker] = useState<{ longitude: number; latitude: number } | null>(
-    initialLocation
-      ? { longitude: initialLocation.longitude, latitude: initialLocation.latitude }
-      : null
-  );
   const [selectedAddress, setSelectedAddress] = useState(initialLocation?.address || "");
 
   useEffect(() => {
-    if (!geocoderContainerRef.current || !MAPBOX_TOKEN) return;
+    if (!mapContainerRef.current || !MAPBOX_TOKEN) return;
 
-    const geocoder = new MapboxGeocoder({
-      accessToken: MAPBOX_TOKEN,
-      mapboxgl: mapRef.current?.getMap(),
-      marker: false,
-      placeholder: "Search for a location...",
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+
+    // Initialize map
+    const map = new mapboxgl.Map({
+      container: mapContainerRef.current,
+      style: "mapbox://styles/mapbox/streets-v12",
+      center: [
+        initialLocation?.longitude || -122.4194,
+        initialLocation?.latitude || 37.7749,
+      ],
+      zoom: initialLocation ? 14 : 10,
     });
 
-    geocoder.on("result", (e: any) => {
-      const { center, place_name } = e.result;
-      const [longitude, latitude] = center;
-      
-      setMarker({ longitude, latitude });
-      setSelectedAddress(place_name);
-      setViewState((prev) => ({
-        ...prev,
-        longitude,
-        latitude,
-        zoom: 14,
-      }));
-      
-      onChange({
-        address: place_name,
-        latitude,
-        longitude,
+    mapRef.current = map;
+
+    // Add navigation controls
+    map.addControl(new mapboxgl.NavigationControl(), "top-right");
+    map.addControl(
+      new mapboxgl.GeolocateControl({
+        positionOptions: {
+          enableHighAccuracy: true,
+        },
+        trackUserLocation: true,
+      }),
+      "top-right"
+    );
+
+    // Add initial marker if exists
+    if (initialLocation) {
+      const marker = new mapboxgl.Marker()
+        .setLngLat([initialLocation.longitude, initialLocation.latitude])
+        .addTo(map);
+      markerRef.current = marker;
+    }
+
+    // Add geocoder
+    if (geocoderContainerRef.current) {
+      const geocoder = new MapboxGeocoder({
+        accessToken: MAPBOX_TOKEN,
+        mapboxgl: mapboxgl,
+        marker: false,
+        placeholder: "Search for a location...",
       });
-    });
 
-    geocoderContainerRef.current.appendChild(geocoder.onAdd(mapRef.current?.getMap()));
+      geocoder.on("result", (e: any) => {
+        const { center, place_name } = e.result;
+        const [longitude, latitude] = center;
+
+        // Remove old marker
+        if (markerRef.current) {
+          markerRef.current.remove();
+        }
+
+        // Add new marker
+        const marker = new mapboxgl.Marker()
+          .setLngLat([longitude, latitude])
+          .addTo(map);
+        markerRef.current = marker;
+
+        setSelectedAddress(place_name);
+        map.flyTo({ center: [longitude, latitude], zoom: 14 });
+
+        onChange({
+          address: place_name,
+          latitude,
+          longitude,
+        });
+      });
+
+      geocoderContainerRef.current.appendChild(geocoder.onAdd(map));
+    }
+
+    // Handle map clicks
+    map.on("click", async (e) => {
+      const { lng: longitude, lat: latitude } = e.lngLat;
+
+      // Remove old marker
+      if (markerRef.current) {
+        markerRef.current.remove();
+      }
+
+      // Add new marker
+      const marker = new mapboxgl.Marker()
+        .setLngLat([longitude, latitude])
+        .addTo(map);
+      markerRef.current = marker;
+
+      // Reverse geocode
+      try {
+        const response = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}`
+        );
+        const data = await response.json();
+        const address = data.features[0]?.place_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+
+        setSelectedAddress(address);
+        onChange({
+          address,
+          latitude,
+          longitude,
+        });
+      } catch (error) {
+        console.error("Error reverse geocoding:", error);
+        const address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        setSelectedAddress(address);
+        onChange({
+          address,
+          latitude,
+          longitude,
+        });
+      }
+    });
 
     return () => {
-      geocoder.onRemove();
+      map.remove();
     };
-  }, [onChange]);
+  }, []);
 
-  const handleMapClick = async (event: any) => {
-    const { lngLat } = event;
-    const longitude = lngLat.lng;
-    const latitude = lngLat.lat;
-
-    setMarker({ longitude, latitude });
-
-    // Reverse geocode to get address
-    try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${MAPBOX_TOKEN}`
-      );
-      const data = await response.json();
-      const address = data.features[0]?.place_name || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-      
-      setSelectedAddress(address);
-      onChange({
-        address,
-        latitude,
-        longitude,
-      });
-    } catch (error) {
-      console.error("Error reverse geocoding:", error);
-      const address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-      setSelectedAddress(address);
-      onChange({
-        address,
-        latitude,
-        longitude,
-      });
-    }
-  };
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -136,39 +180,10 @@ export const MapboxLocationPicker = ({
       )}
       
       {/* Map */}
-      <div className="h-[400px] rounded-lg overflow-hidden border border-border">
-        <Map
-          ref={mapRef}
-          {...viewState}
-          onMove={(evt) => setViewState(evt.viewState)}
-          mapStyle="mapbox://styles/mapbox/streets-v12"
-          mapboxAccessToken={MAPBOX_TOKEN}
-          onClick={handleMapClick}
-        >
-          <NavigationControl position="top-right" />
-          <GeolocateControl
-            position="top-right"
-            trackUserLocation
-            onGeolocate={(e: any) => {
-              const longitude = e.coords.longitude;
-              const latitude = e.coords.latitude;
-              
-              setMarker({ longitude, latitude });
-              handleMapClick({ lngLat: { lng: longitude, lat: latitude } });
-            }}
-          />
-          
-          {marker && (
-            <Marker
-              longitude={marker.longitude}
-              latitude={marker.latitude}
-              anchor="bottom"
-            >
-              <MapPin className="h-8 w-8 text-primary fill-primary" />
-            </Marker>
-          )}
-        </Map>
-      </div>
+      <div 
+        ref={mapContainerRef}
+        className="h-[400px] rounded-lg overflow-hidden border border-border"
+      />
       
       <p className="text-xs text-muted-foreground">
         Search for a location, click on the map, or use the location button to set your precise location.

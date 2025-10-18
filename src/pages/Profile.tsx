@@ -24,21 +24,21 @@ const Profile = () => {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const loadData = async () => {
+      // First check auth
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate("/auth");
         return;
       }
       setCurrentUserId(session.user.id);
-    };
 
-    const loadProfile = async () => {
+      // Then load profile with the correct user ID
       if (!id) return;
 
       try {
         // Query only safe fields - don't request email, latitude, longitude, resume_url unless it's own profile
-        const fieldsToSelect = id === currentUserId 
+        const fieldsToSelect = id === session.user.id 
           ? "*"  // Own profile - get everything
           : "id, full_name, bio, location, profile_photo_url, created_at";  // Other profiles - only safe fields
         
@@ -89,8 +89,7 @@ const Profile = () => {
       }
     };
 
-    checkAuth();
-    loadProfile();
+    loadData();
   }, [id, navigate]);
 
   const handleContactClick = async () => {
