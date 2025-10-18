@@ -266,17 +266,20 @@ const EditProfile = () => {
         resumeUrl = resumePath;
       }
 
-      // Update profile
+      // Upsert profile (insert or update)
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({
+        .upsert({
+          id: currentUserId,
+          email: (await supabase.auth.getUser()).data.user?.email || '',
           full_name: fullName,
           bio: bio,
           location: location ? JSON.stringify(location) : null,
           profile_photo_url: photoUrl,
           resume_url: resumeUrl,
-        })
-        .eq("id", currentUserId);
+        }, {
+          onConflict: 'id'
+        });
 
       if (profileError) throw profileError;
 
