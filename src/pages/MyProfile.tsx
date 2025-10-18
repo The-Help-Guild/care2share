@@ -103,11 +103,14 @@ const MyProfile = () => {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
-
+      
       if (error) throw error;
-
+      
+      // Sign out the user after successful deletion
+      await supabase.auth.signOut();
+      
       toast.success("Account deleted successfully");
-      navigate("/auth");
+      navigate("/onboarding");
     } catch (error: any) {
       console.error("Delete account error:", error);
       toast.error("Failed to delete account");
