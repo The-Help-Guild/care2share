@@ -15,6 +15,7 @@ import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import imageCompression from "browser-image-compression";
 import { EmojiPickerComponent } from "@/components/EmojiPicker";
+import { MapboxLocationPicker } from "@/components/MapboxLocationPicker";
 
 const EditProfile = () => {
   const navigate = useNavigate();
@@ -25,7 +26,11 @@ const EditProfile = () => {
   // Profile data
   const [fullName, setFullName] = useState("");
   const [bio, setBio] = useState("");
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState<{
+    address: string;
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState("");
   const [resume, setResume] = useState<File | null>(null);
@@ -59,7 +64,31 @@ const EditProfile = () => {
       if (profile) {
         setFullName(profile.full_name || "");
         setBio(profile.bio || "");
-        setLocation(profile.location || "");
+        
+        // Parse location - handle both old string format and new JSON format
+        if (profile.location) {
+          try {
+            const parsedLocation = JSON.parse(profile.location);
+            if (parsedLocation.address && parsedLocation.latitude && parsedLocation.longitude) {
+              setLocation(parsedLocation);
+            } else {
+              // Old format: plain string - convert to new format with default coords
+              setLocation({
+                address: profile.location,
+                latitude: 37.7749,
+                longitude: -122.4194,
+              });
+            }
+          } catch {
+            // Old format: plain string - convert to new format with default coords
+            setLocation({
+              address: profile.location,
+              latitude: 37.7749,
+              longitude: -122.4194,
+            });
+          }
+        }
+        
         setProfilePhotoUrl(profile.profile_photo_url || "");
         setExistingResumeUrl(profile.resume_url || "");
       }
@@ -243,7 +272,7 @@ const EditProfile = () => {
         .update({
           full_name: fullName,
           bio: bio,
-          location: location,
+          location: location ? JSON.stringify(location) : null,
           profile_photo_url: photoUrl,
           resume_url: resumeUrl,
         })
@@ -387,13 +416,10 @@ const EditProfile = () => {
             </div>
 
             <div>
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                placeholder="City, Country"
-                maxLength={100}
+              <MapboxLocationPicker
+                initialLocation={location}
+                onChange={setLocation}
+                label="Location"
               />
             </div>
 

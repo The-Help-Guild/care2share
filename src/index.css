@@ -170,3 +170,84 @@ All colors MUST be HSL.
     transform: translateY(0);
   }
 }
+
+/* Mapbox Geocoder Customization */
+.mapboxgl-ctrl-geocoder {
+  @apply w-full shadow-none;
+  max-width: none !important;
+  box-shadow: none !important;
+}
+
+.mapboxgl-ctrl-geocoder input {
+  @apply bg-background text-foreground border-input;
+  padding: 0.5rem 2.5rem 0.5rem 2.5rem;
+  font-size: 0.875rem;
+  height: 2.5rem;
+}
+
+.mapboxgl-ctrl-geocoder input:focus {
+  @apply border-ring ring-2 ring-ring;
+  outline: none;
+}
+
+.mapboxgl-ctrl-geocoder .suggestions {
+  @apply bg-card border-border text-card-foreground;
+  box-shadow: var(--shadow-card);
+}
+
+.mapboxgl-ctrl-geocoder .suggestions > li > a {
+  @apply text-foreground;
+  padding: 0.5rem 0.75rem;
+}
+
+.mapboxgl-ctrl-geocoder .suggestions > .active > a,
+.mapboxgl-ctrl-geocoder .suggestions > li > a:hover {
+  @apply bg-muted;
+}
+
+.mapboxgl-ctrl-geocoder--icon-search {
+  @apply text-muted-foreground;
+  top: 0.625rem;
+  left: 0.625rem;
+}
+
+.mapboxgl-ctrl-geocoder--icon-close {
+  @apply text-muted-foreground;
+  margin-top: 0.625rem;
+  margin-right: 0.625rem;
+}
+
+.mapboxgl-ctrl-geocoder--button {
+  @apply bg-transparent;
+}
+
+/* Mapbox Map Controls */
+.mapboxgl-ctrl-group {
+  @apply bg-card border-border shadow-card;
+  border-radius: 0.5rem;
+}
+
+.mapboxgl-ctrl button {
+  @apply text-foreground;
+}
+
+.mapboxgl-ctrl button:hover {
+  @apply bg-muted;
+}
+
+/* Mapbox Popup */
+.mapboxgl-popup-content {
+  @apply bg-card text-card-foreground border-border shadow-card;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.mapboxgl-popup-close-button {
+  @apply text-muted-foreground;
+  font-size: 1.5rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.mapboxgl-popup-close-button:hover {
+  @apply text-foreground bg-muted;
+}

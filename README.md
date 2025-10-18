@@ -32,7 +32,12 @@ cd <YOUR_PROJECT_NAME>
 # Step 3: Install the necessary dependencies.
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 4: Configure environment variables
+# Create a .env file in the root directory and add:
+# VITE_MAPBOX_TOKEN=your_mapbox_token_here
+# Get your token from: https://account.mapbox.com/access-tokens/
+
+# Step 5: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
@@ -59,6 +64,8 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- Mapbox GL JS (for location selection)
+- Supabase (backend & authentication)
 
 ## How can I deploy this project?
 

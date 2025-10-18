@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Loader2, Upload, X, CheckCircle } from "lucide-react";
 import { z } from "zod";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { MapboxLocationPicker } from "@/components/MapboxLocationPicker";
 
 const profileSchema = z.object({
   bio: z.string().max(1000, { message: "Bio must be less than 1000 characters" }).optional(),
@@ -32,7 +33,11 @@ const ProfileSetup = () => {
 
   // Step 3: Bio & Tags
   const [bio, setBio] = useState("");
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState<{
+    address: string;
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [expertiseInput, setExpertiseInput] = useState("");
   const [expertiseTags, setExpertiseTags] = useState<string[]>([]);
   const [hobbyInput, setHobbyInput] = useState("");
@@ -195,7 +200,7 @@ const ProfileSetup = () => {
           full_name: user.user_metadata.full_name || user.email?.split("@")[0] || "",
           email: user.email!,
           bio: bio || null,
-          location: location || null,
+          location: location ? JSON.stringify(location) : null,
           profile_photo_url: photoUrl || null,
           resume_url: resumeUrl || null,
           terms_accepted_at: user.user_metadata.terms_accepted_at || new Date().toISOString(),
@@ -396,12 +401,10 @@ const ProfileSetup = () => {
                 </div>
 
                 <div>
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="e.g., San Francisco, CA"
+                  <MapboxLocationPicker
+                    initialLocation={location}
+                    onChange={setLocation}
+                    label="Location"
                   />
                 </div>
 

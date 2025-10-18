@@ -6,6 +6,7 @@ import { MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { getLocationAddress, getLocationCoordinates } from '@/lib/locationHelpers';
 
 interface UserLocation {
   id: string;
@@ -60,26 +61,37 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
     }
   };
 
-  // Geocode user locations
+  // Parse user locations (now stored as JSON with coordinates)
   useEffect(() => {
-    const geocodeUsers = async () => {
+    const parseLocations = async () => {
       if (users.length === 0) return;
       
       setIsGeocoding(true);
-      const MAPBOX_TOKEN = 'pk.eyJ1IjoicGl4ZWxzdG9wcm9maXQiLCJhIjoiY21ncWxsazVvMTJpcjJscXc5aWR6bzdoNSJ9._zmgx8h8bMR9Q2i8XpjAvw';
+      const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || 'pk.eyJ1IjoicGl4ZWxzdG9wcm9maXQiLCJhIjoiY21ncWxsazVvMTJpcjJscXc5aWR6bzdoNSJ9._zmgx8h8bMR9Q2i8XpjAvw';
       
       const geocoded = await Promise.all(
         users.map(async (user) => {
-          // If user already has coordinates, use them
+          // If user already has coordinates in separate fields, use them
           if (user.latitude && user.longitude) {
             return user;
           }
           
-          // Otherwise, geocode the location string
+          // Try to parse location JSON format
+          const coordinates = getLocationCoordinates(user.location);
+          if (coordinates) {
+            return {
+              ...user,
+              latitude: coordinates.latitude,
+              longitude: coordinates.longitude,
+            };
+          }
+          
+          // Fallback: geocode the location string (for old format)
           if (user.location) {
+            const locationAddress = getLocationAddress(user.location);
             try {
               const response = await fetch(
-                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(user.location + ', Netherlands')}.json?access_token=${MAPBOX_TOKEN}&limit=1`
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(locationAddress + ', Netherlands')}.json?access_token=${MAPBOX_TOKEN}&limit=1`
               );
               const data = await response.json();
               
@@ -88,7 +100,7 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
                 return { ...user, latitude, longitude };
               }
             } catch (error) {
-              console.error(`Failed to geocode ${user.location}:`, error);
+              console.error(`Failed to geocode ${locationAddress}:`, error);
             }
           }
           
@@ -100,7 +112,7 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
       setIsGeocoding(false);
     };
     
-    geocodeUsers();
+    parseLocations();
   }, [users]);
 
   useEffect(() => {
@@ -144,10 +156,11 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
         const moreCount = user.profile_domains && user.profile_domains.length > 3 ? ` +${user.profile_domains.length - 3} more` : '';
         
         const popupContent = document.createElement('div');
+        const locationDisplay = getLocationAddress(user.location);
         popupContent.innerHTML = `
           <div style="padding: 12px; min-width: 200px;">
             <h3 style="font-weight: bold; margin-bottom: 8px; font-size: 16px;">${user.full_name}</h3>
-            <p style="font-size: 13px; color: #666; margin-bottom: 8px;">📍 ${user.location}</p>
+            <p style="font-size: 13px; color: #666; margin-bottom: 8px;">📍 ${locationDisplay}</p>
             <div style="background: #f3f4f6; padding: 8px; border-radius: 6px; margin-bottom: 10px;">
               <p style="font-size: 12px; color: #374151; font-weight: 500;">Specialties:</p>
               <p style="font-size: 12px; color: #6b7280; margin-top: 4px;">${domains}${moreCount}</p>

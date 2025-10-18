@@ -19,6 +19,7 @@ import UserMenu from "@/components/UserMenu";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { StartConversationButton } from "@/components/StartConversationButton";
 import { CATEGORIES } from "@/lib/constants";
+import { getLocationAddress } from "@/lib/locationHelpers";
 
 const searchInputSchema = z.object({
   query: z.string().max(200, "Search query too long (max 200 characters)"),
@@ -118,15 +119,16 @@ const Search = () => {
       const locationLower = location.toLowerCase();
       
       const filtered = data?.filter((profile) => {
-        // Location filter
-        if (locationLower && !profile.location?.toLowerCase().includes(locationLower)) {
+        // Location filter - handle both JSON and plain string format
+        const profileLocation = getLocationAddress(profile.location);
+        if (locationLower && !profileLocation?.toLowerCase().includes(locationLower)) {
           return false;
         }
 
         // Search query matches
         const nameMatch = profile.full_name.toLowerCase().includes(searchLower);
         const bioMatch = profile.bio?.toLowerCase().includes(searchLower);
-        const locationMatch = profile.location?.toLowerCase().includes(searchLower);
+        const locationMatch = profileLocation?.toLowerCase().includes(searchLower);
         const expertiseMatch = profile.expertise_tags?.some((e: any) =>
           e.tag.toLowerCase().includes(searchLower)
         );
@@ -169,8 +171,9 @@ const Search = () => {
         // Bio matches
         if (profile.bio?.toLowerCase().includes(searchLower)) score += 15;
         
-        // Location match bonus
-        if (location && profile.location?.toLowerCase().includes(locationLower)) score += 25;
+        // Location match bonus - handle both JSON and plain string format
+        const profileLocation = getLocationAddress(profile.location);
+        if (location && profileLocation?.toLowerCase().includes(locationLower)) score += 25;
         
         // Category filtering - boost profiles matching selected categories
         if (categoryFilters.length > 0) {
@@ -434,7 +437,7 @@ const Search = () => {
                         </p>
                         <div className="space-y-2">
                           {profile.location && (
-                            <p className="text-xs text-muted-foreground">📍 {profile.location}</p>
+                            <p className="text-xs text-muted-foreground">📍 {getLocationAddress(profile.location)}</p>
                           )}
                           <div className="flex flex-wrap gap-2">
                             {profile.profile_domains?.slice(0, 3).map((pd: any, i: number) => (

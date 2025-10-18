@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { BlockReportMenu } from "@/components/BlockReportMenu";
+import { getLocationAddress } from "@/lib/locationHelpers";
 
 const Profile = () => {
   const { id } = useParams();
@@ -207,7 +208,7 @@ const Profile = () => {
                   <p className="text-muted-foreground">{profile.email}</p>
                 )}
                 {profile.location && (
-                  <p className="text-muted-foreground text-sm mt-1">📍 {profile.location}</p>
+                  <p className="text-muted-foreground text-sm mt-1">📍 {getLocationAddress(profile.location)}</p>
                 )}
                 <div className="mt-4">
                 {!isOwnProfile && (
