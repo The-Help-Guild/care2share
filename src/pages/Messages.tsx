@@ -136,8 +136,32 @@ const Messages = () => {
             table: 'messages',
             filter: `conversation_id=eq.${selectedConversation}`
           },
-          (payload) => {
-            setMessages(prev => [...prev, payload.new as Message]);
+          async (payload) => {
+            const newMessage = payload.new as any;
+            
+            // Enrich with reply data if applicable
+            if (newMessage.reply_to_id) {
+              const { data: repliedMsg } = await supabase
+                .from("messages")
+                .select("id, content, sender_id")
+                .eq("id", newMessage.reply_to_id)
+                .single();
+
+              if (repliedMsg) {
+                const { data: senderProfile } = await supabase
+                  .from("profiles")
+                  .select("full_name")
+                  .eq("id", repliedMsg.sender_id)
+                  .single();
+
+                newMessage.replied_message = {
+                  ...repliedMsg,
+                  sender_name: senderProfile?.full_name || "Unknown"
+                };
+              }
+            }
+            
+            setMessages(prev => [...prev, newMessage]);
             scrollToBottom();
           }
         )
