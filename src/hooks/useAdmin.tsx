@@ -23,7 +23,7 @@ export const useAdmin = () => {
           .select('role')
           .eq('user_id', session.user.id)
           .eq('role', 'admin')
-          .single();
+          .maybeSingle();
 
         if (error) {
           setIsAdmin(false);
