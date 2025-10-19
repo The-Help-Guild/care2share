@@ -27,7 +27,7 @@ const BottomNav = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-elevated z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-card border-t shadow-lg z-50">
       <div className="max-w-6xl mx-auto px-2 py-2 overflow-x-auto">
         <div className="flex justify-around items-center min-w-max">
           {navItems.map((item) => {
@@ -39,8 +39,8 @@ const BottomNav = () => {
                 key={item.path}
                 variant="ghost"
                 size="sm"
-                className={`flex-1 flex flex-col items-center gap-1 h-auto py-2 ${
-                  active ? "text-primary" : "text-muted-foreground"
+                className={`flex-1 flex flex-col items-center gap-1.5 h-auto py-2.5 transition-colors ${
+                  active ? "text-primary bg-primary/5" : "text-muted-foreground hover:text-foreground"
                 }`}
                 onClick={() => navigate(item.path)}
               >

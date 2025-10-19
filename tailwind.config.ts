@@ -7,14 +7,36 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: "1rem",
       screens: {
+        sm: "640px",
+        md: "768px",
+        lg: "1024px",
+        xl: "1280px",
         "2xl": "1400px",
       },
     },
     extend: {
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+      },
+      fontSize: {
+        xs: ['var(--font-xs)', { lineHeight: '1.5' }],
+        sm: ['var(--font-sm)', { lineHeight: '1.5' }],
+        base: ['var(--font-base)', { lineHeight: '1.6' }],
+        lg: ['var(--font-lg)', { lineHeight: '1.5' }],
+        xl: ['var(--font-xl)', { lineHeight: '1.5' }],
+        '2xl': ['var(--font-2xl)', { lineHeight: '1.4' }],
+        '3xl': ['var(--font-3xl)', { lineHeight: '1.3' }],
+        '4xl': ['var(--font-4xl)', { lineHeight: '1.2' }],
+      },
+      spacing: {
+        xs: 'var(--spacing-xs)',
+        sm: 'var(--spacing-sm)',
+        md: 'var(--spacing-md)',
+        lg: 'var(--spacing-lg)',
+        xl: 'var(--spacing-xl)',
+        '2xl': 'var(--spacing-2xl)',
       },
       colors: {
         border: "hsl(var(--border))",
@@ -59,6 +81,21 @@ export default {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        xl: "calc(var(--radius) + 4px)",
+        "2xl": "calc(var(--radius) + 8px)",
+      },
+      boxShadow: {
+        xs: 'var(--shadow-xs)',
+        sm: 'var(--shadow-sm)',
+        md: 'var(--shadow-md)',
+        lg: 'var(--shadow-lg)',
+        xl: 'var(--shadow-xl)',
+      },
+      letterSpacing: {
+        tighter: '-0.02em',
+        tight: '-0.011em',
+        normal: '0',
+        wide: '0.025em',
       },
       keyframes: {
         "accordion-down": {

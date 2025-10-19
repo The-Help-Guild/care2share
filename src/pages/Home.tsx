@@ -179,10 +179,10 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="bg-card border-b sticky top-0 z-10 shadow-soft">
-        <div className="max-w-6xl mx-auto p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-primary">
+      <header className="bg-card border-b sticky top-0 z-10 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between mb-6">
+            <h1 className="text-3xl font-bold tracking-tight">
               Welcome, {currentUser?.profile?.full_name?.split(" ")[0] || "Friend"}!
             </h1>
             <div className="flex items-center gap-2">
@@ -192,70 +192,70 @@ const Home = () => {
             </div>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                 placeholder="What do you need help with today?"
-                className="pl-10 h-12 text-base"
+                className="pl-11 h-12 text-sm shadow-sm"
               />
             </div>
-            <Button onClick={handleSearch} size="lg" className="px-4 md:px-8 shrink-0">
+            <Button onClick={handleSearch} size="lg" className="px-6 md:px-8 shrink-0 h-12 shadow-sm">
               Search
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-4 space-y-8 animate-fade-in">
+      <main className="max-w-6xl mx-auto px-4 py-8 space-y-10 animate-fade-in">
         <section>
           <UserMap users={recentProfiles} />
         </section>
 
         <section>
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-semibold">New Members in Your Area</h2>
+          <div className="flex items-center gap-3 mb-6">
+            <Users className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-semibold tracking-tight">New Members in Your Area</h2>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {recentProfiles.map((profile) => (
               <Card
                 key={profile.id}
                 className="hover-lift cursor-pointer"
                 onClick={() => navigate(`/profile/${profile.id}`)}
               >
-                <CardHeader>
+                <CardHeader className="pb-4">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
+                    <Avatar className="h-14 w-14 border-2 border-primary/10">
                       <AvatarImage src={profile.profile_photo_url} />
-                      <AvatarFallback className="bg-primary text-primary-foreground">
+                      <AvatarFallback className="bg-primary text-primary-foreground text-base">
                         {getInitials(profile.full_name)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base truncate">
+                      <CardTitle className="text-lg truncate">
                         {profile.full_name}
                       </CardTitle>
-                      <p className="text-sm text-muted-foreground truncate">
+                      <p className="text-sm text-muted-foreground truncate mt-1">
                         {profile.bio?.slice(0, 50) || "No bio yet"}
                         {profile.bio && profile.bio.length > 50 && "..."}
                       </p>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-1">
+                <CardContent className="pt-0">
+                  <div className="flex flex-wrap gap-2">
                     {profile.profile_domains?.slice(0, 3).map((pd: any, i: number) => (
-                      <Badge key={i} variant="secondary" className="text-xs">
+                      <Badge key={i} variant="secondary" className="text-xs font-medium">
                         {pd.domains.name}
                       </Badge>
                     ))}
                     {profile.profile_domains?.length > 3 && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs font-medium">
                         +{profile.profile_domains.length - 3} more
                       </Badge>
                     )}
@@ -266,10 +266,10 @@ const Home = () => {
           </div>
 
           {recentProfiles.length === 0 && (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">
+            <Card className="border-dashed">
+              <CardContent className="py-16 text-center">
+                <Users className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                <p className="text-base text-muted-foreground">
                   No profiles yet. Be among the first to share your expertise!
                 </p>
               </CardContent>
@@ -278,12 +278,12 @@ const Home = () => {
         </section>
 
         <section>
-          <div className="flex items-center gap-2 mb-4">
-            <MessageSquare className="h-5 w-5 text-accent" />
-            <h2 className="text-xl font-semibold">Recent Support Requests</h2>
+          <div className="flex items-center gap-3 mb-6">
+            <MessageSquare className="h-6 w-6 text-primary" />
+            <h2 className="text-2xl font-semibold tracking-tight">Recent Support Requests</h2>
           </div>
           
-          <div className="space-y-3">
+          <div className="space-y-4">
             {supportRequests.map((request) => (
               <Card
                 key={request.id}
@@ -291,11 +291,11 @@ const Home = () => {
                 onClick={() => navigate('/support')}
               >
                 <CardHeader className="pb-3">
-                   <div className="flex items-start justify-between gap-3">
+                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base mb-1">{request.title}</CardTitle>
+                      <CardTitle className="text-lg mb-2">{request.title}</CardTitle>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-xs font-medium">
                           {request.category}
                         </Badge>
                         <span>•</span>
@@ -303,9 +303,9 @@ const Home = () => {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <Avatar className="h-8 w-8 shrink-0">
+                      <Avatar className="h-10 w-10 border-2 border-primary/10 shrink-0">
                         <AvatarImage src={request.profiles?.profile_photo_url} />
-                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                        <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                           {getInitials(request.profiles?.full_name || "?")}
                         </AvatarFallback>
                       </Avatar>
@@ -323,10 +323,10 @@ const Home = () => {
               </Card>
             ))}
             {supportRequests.length === 0 && (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <MessageSquare className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-muted-foreground">No support requests yet</p>
+              <Card className="border-dashed">
+                <CardContent className="py-16 text-center">
+                  <MessageSquare className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
+                  <p className="text-base text-muted-foreground">No support requests yet</p>
                 </CardContent>
               </Card>
             )}
@@ -334,30 +334,32 @@ const Home = () => {
         </section>
 
         <section>
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="h-5 w-5 text-accent" />
-            <h2 className="text-xl font-semibold">Explore All Domains</h2>
-            <Badge variant="secondary" className="ml-auto">{domains.length} Available</Badge>
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="h-6 w-6 text-primary" />
+              <h2 className="text-2xl font-semibold tracking-tight">Explore All Domains</h2>
+            </div>
+            <Badge variant="secondary" className="ml-auto font-medium">{domains.length} Available</Badge>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {domains.map((domain) => (
               <Button
                 key={domain.id}
                 variant="outline"
-                className="h-auto py-4 px-4 flex flex-col items-center gap-2 hover-lift w-full"
+                className="h-auto py-6 px-4 flex flex-col items-center gap-3 hover-lift w-full shadow-sm"
                 onClick={() => navigate(`/feed?domain=${encodeURIComponent(domain.name)}`)}
               >
-                {domain.icon && <span className="text-2xl shrink-0">{domain.icon}</span>}
-                <span className="font-medium text-center text-sm break-words w-full">{domain.name}</span>
+                {domain.icon && <span className="text-3xl shrink-0">{domain.icon}</span>}
+                <span className="font-medium text-center text-sm break-words w-full leading-snug">{domain.name}</span>
               </Button>
             ))}
           </div>
 
           {domains.length === 0 && (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <TrendingUp className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <Card className="border-dashed">
+              <CardContent className="py-16 text-center">
+                <TrendingUp className="h-16 w-16 text-muted-foreground mx-auto mb-4 opacity-50" />
                 <p className="text-muted-foreground">No domains available yet</p>
               </CardContent>
             </Card>
