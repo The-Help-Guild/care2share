@@ -388,6 +388,27 @@ const SupportRequests = () => {
     }
   };
 
+  const handleDeleteRequest = async (requestId: string) => {
+    try {
+      const { error } = await supabase
+        .from("support_requests")
+        .delete()
+        .eq("id", requestId)
+        .eq("user_id", userId);
+
+      if (error) throw error;
+
+      toast.success("Support request deleted successfully");
+      setDetailsOpen(false);
+      setSelectedRequest(null);
+      loadRequests();
+    } catch (error) {
+      console.error("Error deleting support request:", error);
+      toast.error("Failed to delete support request");
+    }
+  };
+
+
   const handleEditReply = async () => {
     if (!userId || !editingReply) return;
 
@@ -746,6 +767,32 @@ const SupportRequests = () => {
                           {getStatusIcon(selectedRequest.status)}
                           <span className="ml-1 capitalize">{selectedRequest.status.replace('_', ' ')}</span>
                         </Badge>
+                      )}
+                      {(userId === selectedRequest.user_id || isAdmin) && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Support Request</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this support request? This action cannot be undone and will also delete all replies.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteRequest(selectedRequest.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       )}
                     </div>
                   </div>

@@ -672,7 +672,7 @@ const Feed = () => {
                         <Pencil className="h-4 w-4" />
                       </Button>
                     )}
-                    {isAdmin && (
+                    {(currentUser?.id === post.user_id || isAdmin) && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
