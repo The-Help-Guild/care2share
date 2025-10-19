@@ -340,7 +340,7 @@ const Home = () => {
             <Badge variant="secondary" className="ml-auto">{domains.length} Available</Badge>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {domains.map((domain) => (
               <Button
                 key={domain.id}
@@ -349,7 +349,7 @@ const Home = () => {
                 onClick={() => navigate(`/feed?domain=${encodeURIComponent(domain.name)}`)}
               >
                 {domain.icon && <span className="text-2xl shrink-0">{domain.icon}</span>}
-                <span className="font-medium text-center text-sm break-words w-full line-clamp-2">{domain.name}</span>
+                <span className="font-medium text-center text-sm break-words w-full">{domain.name}</span>
               </Button>
             ))}
           </div>
