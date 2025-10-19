@@ -290,20 +290,20 @@ const Home = () => {
                 className="cursor-pointer hover-lift"
                 onClick={() => navigate('/support')}
               >
-                <CardHeader className="pb-3">
-                   <div className="flex items-start justify-between gap-4">
+                 <CardHeader className="pb-3">
+                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg mb-2">{request.title}</CardTitle>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Badge variant="outline" className="text-xs font-medium">
+                      <CardTitle className="text-lg mb-3">{request.title}</CardTitle>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2 text-sm text-muted-foreground">
+                        <Badge variant="outline" className="text-xs font-medium w-fit">
                           {request.category}
                         </Badge>
-                        <span>•</span>
-                        <span>{formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="text-xs sm:text-sm">{formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}</span>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Avatar className="h-10 w-10 border-2 border-primary/10 shrink-0">
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <Avatar className="h-10 w-10 border-2 border-primary/10">
                         <AvatarImage src={request.profiles?.profile_photo_url} />
                         <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                           {getInitials(request.profiles?.full_name || "?")}
@@ -319,7 +319,7 @@ const Home = () => {
                       )}
                     </div>
                   </div>
-                </CardHeader>
+                 </CardHeader>
               </Card>
             ))}
             {supportRequests.length === 0 && (

@@ -14,7 +14,6 @@ const BottomNav = () => {
     { icon: Search, label: "Search", path: "/search" },
     { icon: HelpCircle, label: "Support", path: "/support" },
     { icon: MessageCircle, label: "Messages", path: "/messages" },
-    { icon: User, label: "Profile", path: "/my-profile" },
   ];
 
   // Add admin item only for admins
