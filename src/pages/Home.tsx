@@ -345,11 +345,11 @@ const Home = () => {
               <Button
                 key={domain.id}
                 variant="outline"
-                className="h-auto py-4 px-4 flex flex-col items-center gap-2 hover-lift"
+                className="h-auto py-4 px-4 flex flex-col items-center gap-2 hover-lift w-full"
                 onClick={() => navigate(`/feed?domain=${encodeURIComponent(domain.name)}`)}
               >
-                {domain.icon && <span className="text-2xl">{domain.icon}</span>}
-                <span className="font-medium text-center text-sm">{domain.name}</span>
+                {domain.icon && <span className="text-2xl shrink-0">{domain.icon}</span>}
+                <span className="font-medium text-center text-sm break-words w-full line-clamp-2">{domain.name}</span>
               </Button>
             ))}
           </div>
