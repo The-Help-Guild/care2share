@@ -203,7 +203,7 @@ const Home = () => {
                 className="pl-10 h-12 text-base"
               />
             </div>
-            <Button onClick={handleSearch} size="lg" className="px-8">
+            <Button onClick={handleSearch} size="lg" className="px-4 md:px-8 shrink-0">
               Search
             </Button>
           </div>
