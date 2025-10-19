@@ -82,14 +82,30 @@ const Home = () => {
           category,
           status,
           created_at,
-          user_id,
-          profiles!support_requests_user_id_fkey(full_name, profile_photo_url)
+          user_id
         `)
         .eq("status", "open")
         .order("created_at", { ascending: false })
         .limit(5);
 
-      if (data) setSupportRequests(data);
+      if (data) {
+        // Fetch profile data separately for each request
+        const requestsWithProfiles = await Promise.all(
+          data.map(async (request) => {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name, profile_photo_url")
+              .eq("id", request.user_id)
+              .single();
+            
+            return {
+              ...request,
+              profiles: profile
+            };
+          })
+        );
+        setSupportRequests(requestsWithProfiles);
+      }
     };
 
     const loadDomains = async () => {
