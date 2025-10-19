@@ -74,10 +74,12 @@ interface Reply {
   user_id: string;
   content: string;
   created_at: string;
+  parent_reply_id: string | null;
   profiles: {
     full_name: string;
     profile_photo_url: string | null;
   };
+  nestedReplies?: Reply[];
 }
 
 const SupportRequests = () => {
@@ -111,6 +113,7 @@ const SupportRequests = () => {
   const [replyContent, setReplyContent] = useState("");
   const [editingReply, setEditingReply] = useState<Reply | null>(null);
   const [isEditReplyDialogOpen, setIsEditReplyDialogOpen] = useState(false);
+  const [replyingToId, setReplyingToId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -232,12 +235,32 @@ const SupportRequests = () => {
           
           return {
             ...reply,
-            profiles: profile || { full_name: "Unknown User", profile_photo_url: null }
+            profiles: profile || { full_name: "Unknown User", profile_photo_url: null },
+            nestedReplies: []
           };
         })
       );
       
-      setReplies(repliesWithProfiles);
+      // Organize replies hierarchically
+      const topLevelReplies = repliesWithProfiles.filter(r => !r.parent_reply_id);
+      const nestedRepliesMap = new Map<string, Reply[]>();
+      
+      repliesWithProfiles.filter(r => r.parent_reply_id).forEach(reply => {
+        if (!nestedRepliesMap.has(reply.parent_reply_id!)) {
+          nestedRepliesMap.set(reply.parent_reply_id!, []);
+        }
+        nestedRepliesMap.get(reply.parent_reply_id!)!.push(reply);
+      });
+      
+      // Attach nested replies to their parents
+      const organizeReplies = (replies: Reply[]): Reply[] => {
+        return replies.map(reply => ({
+          ...reply,
+          nestedReplies: organizeReplies(nestedRepliesMap.get(reply.id) || [])
+        }));
+      };
+      
+      setReplies(organizeReplies(topLevelReplies));
     } catch (error) {
       console.error("Error loading replies:", error);
       toast.error("Failed to load replies");
@@ -301,13 +324,15 @@ const SupportRequests = () => {
         .insert({
           request_id: selectedRequest.id,
           user_id: userId,
-          content: validated.content
+          content: validated.content,
+          parent_reply_id: replyingToId
         });
 
       if (error) throw error;
 
-      toast.success("Reply posted");
+      toast.success(replyingToId ? "Comment posted" : "Reply posted");
       setReplyContent("");
+      setReplyingToId(null);
       loadReplies(selectedRequest.id);
       loadRequests(); // Refresh to update reply count
     } catch (error) {
@@ -742,63 +767,100 @@ const SupportRequests = () => {
                   </p>
                 ) : (
                   <div className="space-y-3">
-                    {replies.map((reply) => (
-                      <div key={reply.id} className="flex gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage src={reply.profiles.profile_photo_url || ""} />
-                          <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                            {getInitials(reply.profiles.full_name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 bg-muted rounded-lg p-3">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">{reply.profiles.full_name}</span>
-                              <span className="text-xs text-muted-foreground">{formatDate(reply.created_at)}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              {userId === reply.user_id && (
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-6 w-6"
-                                  onClick={() => {
-                                    setEditingReply(reply);
-                                    setIsEditReplyDialogOpen(true);
-                                  }}
-                                >
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
-                              )}
-                              {isAdmin && (
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6">
-                                      <Trash2 className="h-3 w-3 text-destructive" />
+                    {replies.map((reply) => {
+                      const renderReply = (reply: Reply, depth: number = 0) => (
+                        <div key={reply.id} className={depth > 0 ? "ml-8 mt-3" : ""}>
+                          <div className="flex gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={reply.profiles.profile_photo_url || ""} />
+                              <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                                {getInitials(reply.profiles.full_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 bg-muted rounded-lg p-3">
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium">{reply.profiles.full_name}</span>
+                                  <span className="text-xs text-muted-foreground">{formatDate(reply.created_at)}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {userId === reply.user_id && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-6 w-6"
+                                      onClick={() => {
+                                        setEditingReply(reply);
+                                        setIsEditReplyDialogOpen(true);
+                                      }}
+                                    >
+                                      <Pencil className="h-3 w-3" />
                                     </Button>
-                                  </AlertDialogTrigger>
-                                  <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>Delete Reply</AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        Are you sure you want to delete this reply? This action cannot be undone.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleDeleteReply(reply.id)}>
-                                        Delete
-                                      </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              )}
+                                  )}
+                                  {isAdmin && (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6">
+                                          <Trash2 className="h-3 w-3 text-destructive" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Delete Reply</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to delete this reply? This action cannot be undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteReply(reply.id)}>
+                                            Delete
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="text-sm whitespace-pre-wrap">{reply.content}</p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 mt-2 text-xs"
+                                onClick={() => {
+                                  setReplyingToId(reply.id);
+                                  document.querySelector<HTMLTextAreaElement>('textarea[placeholder*="reply"]')?.focus();
+                                }}
+                              >
+                                <MessageSquare className="h-3 w-3 mr-1" />
+                                Reply
+                              </Button>
                             </div>
                           </div>
-                          <p className="text-sm whitespace-pre-wrap">{reply.content}</p>
+                          {reply.nestedReplies && reply.nestedReplies.length > 0 && (
+                            <div className="space-y-3">
+                              {reply.nestedReplies.map(nestedReply => renderReply(nestedReply, depth + 1))}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                      return renderReply(reply);
+                    })}
+                  </div>
+                )}
+
+                {replyingToId && (
+                  <div className="flex items-center gap-2 py-2 px-3 bg-muted/50 rounded-lg mt-4">
+                    <MessageSquare className="h-4 w-4" />
+                    <span className="text-sm">Replying to a comment</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 ml-auto"
+                      onClick={() => setReplyingToId(null)}
+                    >
+                      Cancel
+                    </Button>
                   </div>
                 )}
 

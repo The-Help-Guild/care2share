@@ -611,6 +611,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          parent_reply_id: string | null
           request_id: string
           user_id: string
         }
@@ -618,6 +619,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          parent_reply_id?: string | null
           request_id: string
           user_id: string
         }
@@ -625,10 +627,18 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          parent_reply_id?: string | null
           request_id?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "support_request_replies_parent_reply_id_fkey"
+            columns: ["parent_reply_id"]
+            isOneToOne: false
+            referencedRelation: "support_request_replies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "support_request_replies_request_id_fkey"
             columns: ["request_id"]
