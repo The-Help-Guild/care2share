@@ -179,8 +179,8 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="bg-card border-b sticky top-0 z-10 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+      <header className="bg-card border-b border-border sticky top-0 z-10 shadow-md">
+        <div className="max-w-6xl mx-auto px-4 py-5">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold tracking-tight">
               Welcome, {currentUser?.profile?.full_name?.split(" ")[0] || "Friend"}!
@@ -200,10 +200,10 @@ const Home = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                 placeholder="What do you need help with today?"
-                className="pl-11 h-12 text-sm shadow-sm"
+                className="pl-11 h-12 text-sm"
               />
             </div>
-            <Button onClick={handleSearch} size="lg" className="px-6 md:px-8 shrink-0 h-12 shadow-sm">
+            <Button onClick={handleSearch} size="lg" className="px-6 md:px-8 shrink-0 h-12">
               Search
             </Button>
           </div>
@@ -347,7 +347,7 @@ const Home = () => {
               <Button
                 key={domain.id}
                 variant="outline"
-                className="h-auto py-6 px-4 flex flex-col items-center gap-3 hover-lift w-full shadow-sm"
+                className="h-auto py-6 px-4 flex flex-col items-center gap-3 hover-lift w-full"
                 onClick={() => navigate(`/feed?domain=${encodeURIComponent(domain.name)}`)}
               >
                 {domain.icon && <span className="text-3xl shrink-0">{domain.icon}</span>}
