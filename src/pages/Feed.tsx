@@ -87,8 +87,10 @@ const Feed = () => {
   }, [navigate, searchParams]);
 
   useEffect(() => {
-    loadPosts();
-  }, [selectedDomain]);
+    if (domains.length > 0) {
+      loadPosts();
+    }
+  }, [selectedDomain, domains.length]);
 
   useEffect(() => {
     if (posts.length > 0 && currentUser) {
