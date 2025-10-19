@@ -106,13 +106,33 @@ const Home = () => {
     loadSupportRequests();
     loadDomains();
 
+    // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
         navigate("/auth");
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Subscribe to support requests changes
+    const supportRequestsChannel = supabase
+      .channel('support-requests-home')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'support_requests'
+        },
+        () => {
+          loadSupportRequests();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(supportRequestsChannel);
+    };
   }, [navigate]);
 
   const handleSearch = () => {
