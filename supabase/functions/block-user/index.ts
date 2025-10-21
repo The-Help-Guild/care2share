@@ -27,10 +27,13 @@ Deno.serve(async (req) => {
     );
 
     // Verify the user is authenticated
+    const authHeader = req.headers.get('Authorization') || '';
+    const jwt = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+
     const {
       data: { user },
       error: userError,
-    } = await supabaseClient.auth.getUser();
+    } = await supabaseClient.auth.getUser(jwt);
 
     if (userError || !user) {
       console.error('Authentication error:', userError);
