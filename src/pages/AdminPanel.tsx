@@ -28,6 +28,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { 
   Shield, 
   Users, 
@@ -38,7 +46,9 @@ import {
   Loader2,
   UserCog,
   CheckCircle,
-  XCircle
+  XCircle,
+  Eye,
+  ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -69,6 +79,8 @@ interface Post {
   content: string;
   created_at: string;
   user_id: string;
+  photo_url?: string | null;
+  youtube_url?: string | null;
   profiles?: {
     full_name: string;
     email: string;
@@ -124,6 +136,8 @@ const AdminPanel = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [blockReason, setBlockReason] = useState("");
+  const [selectedActivity, setSelectedActivity] = useState<ActivityItem | null>(null);
+  const [activityDialogOpen, setActivityDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!adminLoading && !isAdmin) {
@@ -160,7 +174,7 @@ const AdminPanel = () => {
     try {
       const [adminActionsRes, postsRes, supportReqsRes, supportRepliesRes] = await Promise.all([
         supabase.from('admin_actions').select('*').order('created_at', { ascending: false }).limit(50),
-        supabase.from('posts').select('id, title, content, created_at, user_id').order('created_at', { ascending: false }).limit(50),
+        supabase.from('posts').select('id, title, content, created_at, user_id, photo_url, youtube_url').order('created_at', { ascending: false }).limit(50),
         supabase.from('support_requests').select('id, title, description, category, status, created_at, user_id').order('created_at', { ascending: false }).limit(50),
         supabase.from('support_request_replies').select('id, content, created_at, user_id, request_id').order('created_at', { ascending: false }).limit(50),
       ]);
@@ -391,12 +405,111 @@ const AdminPanel = () => {
         { item_id: activity.data.id }
       );
       
+      setActivityDialogOpen(false);
+      setSelectedActivity(null);
       loadAllActivities();
     } catch (error: any) {
       console.error('Error deleting activity:', error);
       toast.error('Failed to delete item');
     } finally {
       setActionLoading(false);
+    }
+  };
+
+  const extractYoutubeId = (url: string) => {
+    const match = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([^"&?\/\s]{11})/);
+    return match ? match[1] : null;
+  };
+
+  const renderActivityContent = (activity: ActivityItem) => {
+    if (activity.type === 'post') {
+      const post = activity.data as Post;
+      return (
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-semibold text-lg mb-2">{post.title}</h3>
+            <p className="text-muted-foreground whitespace-pre-wrap">{post.content}</p>
+          </div>
+          {post.photo_url && (
+            <div className="rounded-lg overflow-hidden">
+              <img 
+                src={post.photo_url} 
+                alt="Post" 
+                className="w-full h-auto max-h-96 object-cover"
+              />
+            </div>
+          )}
+          {post.youtube_url && (() => {
+            const videoId = extractYoutubeId(post.youtube_url);
+            return videoId ? (
+              <div className="aspect-video rounded-lg overflow-hidden">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src={`https://www.youtube.com/embed/${videoId}`}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  className="w-full h-full"
+                />
+              </div>
+            ) : null;
+          })()}
+          <div className="text-sm text-muted-foreground">
+            <p>Author: {post.profiles?.full_name || 'Unknown'}</p>
+            <p>Posted: {formatDate(post.created_at)}</p>
+          </div>
+        </div>
+      );
+    } else if (activity.type === 'support_request') {
+      const request = activity.data as SupportRequest;
+      return (
+        <div className="space-y-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-semibold text-lg">{request.title}</h3>
+              <Badge variant={request.status === 'open' ? 'default' : 'secondary'}>
+                {request.status}
+              </Badge>
+            </div>
+            <Badge variant="outline" className="mb-3">{request.category}</Badge>
+            <p className="text-muted-foreground whitespace-pre-wrap">{request.description}</p>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            <p>Submitted by: {request.profiles?.full_name || 'Unknown'}</p>
+            <p>Created: {formatDate(request.created_at)}</p>
+          </div>
+        </div>
+      );
+    } else if (activity.type === 'support_reply') {
+      const reply = activity.data as SupportReply;
+      return (
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-semibold text-lg mb-2">Reply to: {reply.support_requests?.title || 'Support Request'}</h3>
+            <p className="text-muted-foreground whitespace-pre-wrap">{reply.content}</p>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            <p>Author: {reply.profiles?.full_name || 'Unknown'}</p>
+            <p>Posted: {formatDate(reply.created_at)}</p>
+          </div>
+        </div>
+      );
+    } else if (activity.type === 'admin_action') {
+      const action = activity.data as AdminAction;
+      return (
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-semibold text-lg mb-2">{action.action_type}</h3>
+            <pre className="text-sm text-muted-foreground bg-muted p-3 rounded-md overflow-auto">
+              {JSON.stringify(action.details, null, 2)}
+            </pre>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            <p>Action performed: {formatDate(action.created_at)}</p>
+          </div>
+        </div>
+      );
     }
   };
 
@@ -614,7 +727,14 @@ const AdminPanel = () => {
                   </TableHeader>
                   <TableBody>
                     {activities.map((activity, index) => (
-                      <TableRow key={`${activity.type}-${activity.data.id}-${index}`}>
+                      <TableRow 
+                        key={`${activity.type}-${activity.data.id}-${index}`}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => {
+                          setSelectedActivity(activity);
+                          setActivityDialogOpen(true);
+                        }}
+                      >
                         <TableCell>
                           <Badge variant="outline">
                             {activity.type === 'admin_action' && 'Admin Action'}
@@ -673,17 +793,32 @@ const AdminPanel = () => {
                         <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                           {formatDate(activity.data.created_at)}
                         </TableCell>
-                        <TableCell>
-                          {activity.type !== 'admin_action' && (
+                        <TableCell onClick={(e) => e.stopPropagation()}>
+                          <div className="flex gap-2">
                             <Button
                               size="sm"
-                              variant="destructive"
-                              onClick={() => handleDeleteActivity(activity)}
-                              disabled={actionLoading}
+                              variant="ghost"
+                              onClick={() => {
+                                setSelectedActivity(activity);
+                                setActivityDialogOpen(true);
+                              }}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Eye className="h-4 w-4" />
                             </Button>
-                          )}
+                            {activity.type !== 'admin_action' && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteActivity(activity);
+                                }}
+                                disabled={actionLoading}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -754,6 +889,41 @@ const AdminPanel = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Activity Detail Dialog */}
+      <Dialog open={activityDialogOpen} onOpenChange={setActivityDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedActivity?.type === 'post' && 'Post Details'}
+              {selectedActivity?.type === 'support_request' && 'Support Request Details'}
+              {selectedActivity?.type === 'support_reply' && 'Support Reply Details'}
+              {selectedActivity?.type === 'admin_action' && 'Admin Action Details'}
+            </DialogTitle>
+            <DialogDescription>
+              View full details and manage this item
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedActivity && renderActivityContent(selectedActivity)}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setActivityDialogOpen(false)}>
+              Close
+            </Button>
+            {selectedActivity && selectedActivity.type !== 'admin_action' && (
+              <Button
+                variant="destructive"
+                onClick={() => handleDeleteActivity(selectedActivity)}
+                disabled={actionLoading}
+              >
+                {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                Delete
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
