@@ -255,7 +255,13 @@ const AdminPanel = () => {
 
     setActionLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
       const { data, error } = await supabase.functions.invoke('block-user', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: {
           userId: selectedUser.id,
           reason: blockReason,
@@ -282,7 +288,13 @@ const AdminPanel = () => {
   const handleUnblockUser = async (user: User) => {
     setActionLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+
       const { data, error } = await supabase.functions.invoke('unblock-user', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: {
           userId: user.id,
         },
