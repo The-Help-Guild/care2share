@@ -50,8 +50,8 @@ const Home = () => {
     };
 
     const loadRecentProfiles = async () => {
-      // Use left join to include profiles even without domains
-      const { data } = await supabase
+      // Fetch profiles first
+      const { data: profilesData } = await supabase
         .from("profiles")
         .select(`
           id,
@@ -61,15 +61,36 @@ const Home = () => {
           latitude,
           longitude,
           profile_photo_url,
-          created_at,
-          profile_domains(
-            domains(name)
-          )
+          created_at
         `)
         .order("created_at", { ascending: false })
         .limit(6);
 
-      if (data) setRecentProfiles(data);
+      if (profilesData && profilesData.length > 0) {
+        // Fetch profile_domains with domains for these profiles
+        const profileIds = profilesData.map(p => p.id);
+        
+        const { data: profileDomainsData } = await supabase
+          .from("profile_domains")
+          .select(`
+            profile_id,
+            domain_id,
+            domains!inner(name)
+          `)
+          .in('profile_id', profileIds);
+
+        // Merge domains into profiles
+        const enrichedProfiles = profilesData.map(profile => ({
+          ...profile,
+          profile_domains: profileDomainsData
+            ?.filter(pd => pd.profile_id === profile.id)
+            .map(pd => ({ domains: { name: pd.domains.name } })) || []
+        }));
+
+        setRecentProfiles(enrichedProfiles);
+      } else {
+        setRecentProfiles([]);
+      }
       setLoading(false);
     };
 
