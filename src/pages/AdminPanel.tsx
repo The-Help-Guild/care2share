@@ -63,12 +63,59 @@ interface AdminAction {
   target_user_id: string | null;
 }
 
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+  profiles?: {
+    full_name: string;
+    email: string;
+  } | null;
+}
+
+interface SupportRequest {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  status: string;
+  created_at: string;
+  user_id: string;
+  profiles?: {
+    full_name: string;
+    email: string;
+  } | null;
+}
+
+interface SupportReply {
+  id: string;
+  content: string;
+  created_at: string;
+  user_id: string;
+  request_id: string;
+  support_requests?: {
+    title: string;
+  } | null;
+  profiles?: {
+    full_name: string;
+    email: string;
+  } | null;
+}
+
+type ActivityItem = 
+  | { type: 'admin_action'; data: AdminAction }
+  | { type: 'post'; data: Post }
+  | { type: 'support_request'; data: SupportRequest }
+  | { type: 'support_reply'; data: SupportReply };
+
 const AdminPanel = () => {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading, userId: currentAdminId } = useAdmin();
   
   const [users, setUsers] = useState<User[]>([]);
-  const [adminActions, setAdminActions] = useState<AdminAction[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   
@@ -88,7 +135,7 @@ const AdminPanel = () => {
   useEffect(() => {
     if (isAdmin) {
       loadUsers();
-      loadAdminActions();
+      loadAllActivities();
     }
   }, [isAdmin]);
 
@@ -109,18 +156,72 @@ const AdminPanel = () => {
     }
   };
 
-  const loadAdminActions = async () => {
+  const loadAllActivities = async () => {
     try {
-      const { data, error } = await supabase
+      // Fetch admin actions
+      const { data: adminActionsData } = await supabase
         .from('admin_actions')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (error) throw error;
-      setAdminActions(data || []);
+      // Fetch posts with user info
+      const { data: postsData } = await supabase
+        .from('posts')
+        .select('*, profiles!posts_user_id_fkey(full_name, email)')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      // Fetch support requests with user info
+      const { data: supportRequestsData } = await supabase
+        .from('support_requests')
+        .select('*, profiles!support_requests_user_id_fkey(full_name, email)')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      // Fetch support replies with user info
+      const { data: supportRepliesData } = await supabase
+        .from('support_request_replies')
+        .select('*, profiles!support_request_replies_user_id_fkey(full_name, email), support_requests!support_request_replies_request_id_fkey(title)')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      // Combine all activities
+      const combined: ActivityItem[] = [
+        ...(adminActionsData?.map(a => ({ type: 'admin_action' as const, data: a })) || []),
+        ...(postsData?.map(p => ({ 
+          type: 'post' as const, 
+          data: {
+            ...p,
+            profiles: Array.isArray(p.profiles) ? p.profiles[0] : p.profiles
+          }
+        })) || []),
+        ...(supportRequestsData?.map(s => ({ 
+          type: 'support_request' as const, 
+          data: {
+            ...s,
+            profiles: Array.isArray(s.profiles) ? s.profiles[0] : s.profiles
+          }
+        })) || []),
+        ...(supportRepliesData?.map(r => ({ 
+          type: 'support_reply' as const, 
+          data: {
+            ...r,
+            profiles: Array.isArray(r.profiles) ? r.profiles[0] : r.profiles,
+            support_requests: Array.isArray(r.support_requests) ? r.support_requests[0] : r.support_requests
+          }
+        })) || [])
+      ];
+
+      // Sort by created_at
+      combined.sort((a, b) => 
+        new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime()
+      );
+
+      setActivities(combined);
     } catch (error: any) {
-      console.error("Failed to load admin actions:", error);
+      console.error("Failed to load activities:", error);
+      toast.error("Failed to load activity log");
     }
   };
 
@@ -162,7 +263,7 @@ const AdminPanel = () => {
       setBlockReason("");
       setSelectedUser(null);
       loadUsers();
-      loadAdminActions();
+      loadAllActivities();
     } catch (error: any) {
       toast.error(error.message || "Failed to block user");
       console.error(error);
@@ -185,7 +286,7 @@ const AdminPanel = () => {
 
       toast.success(`User ${user.full_name} has been unblocked`);
       loadUsers();
-      loadAdminActions();
+      loadAllActivities();
     } catch (error: any) {
       toast.error("Failed to unblock user");
       console.error(error);
@@ -215,7 +316,7 @@ const AdminPanel = () => {
       setDeleteDialogOpen(false);
       setSelectedUser(null);
       loadUsers();
-      loadAdminActions();
+      loadAllActivities();
     } catch (error: any) {
       toast.error("Failed to delete user account");
       console.error(error);
@@ -237,6 +338,49 @@ const AdminPanel = () => {
     return new Date(date).toLocaleString();
   };
 
+  const handleDeleteActivity = async (activity: ActivityItem) => {
+    setActionLoading(true);
+    try {
+      if (activity.type === 'post') {
+        const { error } = await supabase
+          .from('posts')
+          .delete()
+          .eq('id', activity.data.id);
+        if (error) throw error;
+        toast.success('Post deleted');
+      } else if (activity.type === 'support_request') {
+        const { error } = await supabase
+          .from('support_requests')
+          .delete()
+          .eq('id', activity.data.id);
+        if (error) throw error;
+        toast.success('Support request deleted');
+      } else if (activity.type === 'support_reply') {
+        const { error } = await supabase
+          .from('support_request_replies')
+          .delete()
+          .eq('id', activity.data.id);
+        if (error) throw error;
+        toast.success('Support reply deleted');
+      }
+      
+      await logAdminAction(
+        `DELETE_${activity.type.toUpperCase()}`, 
+        activity.type === 'post' || activity.type === 'support_request' || activity.type === 'support_reply' 
+          ? activity.data.user_id 
+          : null,
+        { item_id: activity.data.id }
+      );
+      
+      loadAllActivities();
+    } catch (error: any) {
+      console.error('Error deleting activity:', error);
+      toast.error('Failed to delete item');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (adminLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -253,7 +397,7 @@ const AdminPanel = () => {
     totalUsers: users.length,
     blockedUsers: users.filter(u => u.is_blocked).length,
     activeUsers: users.filter(u => !u.is_blocked).length,
-    recentActions: adminActions.length
+    recentActions: activities.length
   };
 
   return (
@@ -433,38 +577,94 @@ const AdminPanel = () => {
           <TabsContent value="activity" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Admin Activity Log</CardTitle>
+                <CardTitle>Activity Log</CardTitle>
                 <CardDescription>
-                  Recent administrative actions taken in the system
+                  All system activity including posts, support requests, and admin actions
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Action</TableHead>
-                      <TableHead>Details</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Content</TableHead>
+                      <TableHead>User</TableHead>
                       <TableHead>Timestamp</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {adminActions.map((action) => (
-                      <TableRow key={action.id}>
+                    {activities.map((activity, index) => (
+                      <TableRow key={`${activity.type}-${activity.data.id}-${index}`}>
                         <TableCell>
                           <Badge variant="outline">
-                            {action.action_type.replace(/_/g, ' ')}
+                            {activity.type === 'admin_action' && 'Admin Action'}
+                            {activity.type === 'post' && 'Post'}
+                            {activity.type === 'support_request' && 'Support Request'}
+                            {activity.type === 'support_reply' && 'Support Reply'}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {action.details?.user_email && (
-                            <span>User: {action.details.user_email}</span>
+                        <TableCell className="max-w-md">
+                          {activity.type === 'admin_action' && (
+                            <div className="text-sm">
+                              <div className="font-medium">
+                                {activity.data.action_type.replace(/_/g, ' ')}
+                              </div>
+                              {activity.data.details?.user_email && (
+                                <span className="text-muted-foreground">
+                                  User: {activity.data.details.user_email}
+                                </span>
+                              )}
+                            </div>
                           )}
-                          {action.details?.reason && (
-                            <span className="block">Reason: {action.details.reason}</span>
+                          {activity.type === 'post' && (
+                            <div className="text-sm">
+                              <div className="font-medium line-clamp-1">
+                                {activity.data.title}
+                              </div>
+                              <div className="text-muted-foreground line-clamp-2">
+                                {activity.data.content}
+                              </div>
+                            </div>
+                          )}
+                          {activity.type === 'support_request' && (
+                            <div className="text-sm">
+                              <div className="font-medium line-clamp-1">
+                                {activity.data.title}
+                              </div>
+                              <div className="text-muted-foreground">
+                                Category: {activity.data.category} • Status: {activity.data.status}
+                              </div>
+                            </div>
+                          )}
+                          {activity.type === 'support_reply' && (
+                            <div className="text-sm">
+                              <div className="text-muted-foreground line-clamp-2">
+                                Reply to: {activity.data.support_requests?.title}
+                              </div>
+                              <div className="line-clamp-2">
+                                {activity.data.content}
+                              </div>
+                            </div>
                           )}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {formatDate(action.created_at)}
+                        <TableCell className="text-sm text-muted-foreground">
+                          {activity.type !== 'admin_action' && activity.data.profiles?.full_name}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                          {formatDate(activity.data.created_at)}
+                        </TableCell>
+                        <TableCell>
+                          {activity.type !== 'admin_action' && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteActivity(activity)}
+                              disabled={actionLoading}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
