@@ -168,21 +168,21 @@ const AdminPanel = () => {
       // Fetch posts with user info
       const { data: postsData } = await supabase
         .from('posts')
-        .select('*, profiles!posts_user_id_fkey(full_name, email)')
+        .select('*, profiles(full_name, email)')
         .order('created_at', { ascending: false })
         .limit(50);
 
       // Fetch support requests with user info
       const { data: supportRequestsData } = await supabase
         .from('support_requests')
-        .select('*, profiles!support_requests_user_id_fkey(full_name, email)')
+        .select('*, profiles(full_name, email)')
         .order('created_at', { ascending: false })
         .limit(50);
 
       // Fetch support replies with user info
       const { data: supportRepliesData } = await supabase
         .from('support_request_replies')
-        .select('*, profiles!support_request_replies_user_id_fkey(full_name, email), support_requests!support_request_replies_request_id_fkey(title)')
+        .select('*, profiles(full_name, email), support_requests(title)')
         .order('created_at', { ascending: false })
         .limit(50);
 
