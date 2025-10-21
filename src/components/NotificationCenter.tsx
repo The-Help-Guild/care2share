@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -70,6 +70,18 @@ export const NotificationCenter = () => {
             loadNotifications();
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`
+          },
+          () => {
+            loadNotifications();
+          }
+        )
         .subscribe();
 
       return () => {
@@ -126,6 +138,25 @@ export const NotificationCenter = () => {
     } catch (error) {
       console.error('Error marking all as read:', error);
       toast.error('Failed to mark notifications as read');
+    }
+  };
+
+  const deleteNotification = async (notificationId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering the notification click
+    
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
+
+      if (error) throw error;
+
+      toast.success('Notification deleted');
+      loadNotifications();
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      toast.error('Failed to delete notification');
     }
   };
 
@@ -202,9 +233,19 @@ export const NotificationCenter = () => {
                         {formatTime(notification.created_at)}
                       </p>
                     </div>
-                    {!notification.read && (
-                      <div className="h-2 w-2 rounded-full bg-primary flex-shrink-0 mt-1" />
-                    )}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {!notification.read && (
+                        <div className="h-2 w-2 rounded-full bg-primary" />
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
+                        onClick={(e) => deleteNotification(notification.id, e)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}
