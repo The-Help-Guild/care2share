@@ -142,17 +142,38 @@ const Home = () => {
     };
 
     const loadDomains = async () => {
-      // Fetch ALL domains without embedded relations to avoid FK dependency
-      const { data } = await supabase
+      // Fetch all domains
+      const { data: domainsData } = await supabase
         .from("domains")
-        .select("id, name, icon, created_at")
-        .order("name", { ascending: true });
+        .select("id, name, icon, created_at");
 
-      if (data) {
-        setDomains(data);
-      } else {
+      if (!domainsData) {
         setDomains([]);
+        return;
       }
+
+      // Fetch all posts and count by domain
+      const { data: postsData } = await supabase
+        .from("posts")
+        .select("domain_id");
+
+      // Count posts per domain
+      const postCounts: Record<string, number> = {};
+      (postsData || []).forEach((post) => {
+        if (post.domain_id) {
+          postCounts[post.domain_id] = (postCounts[post.domain_id] || 0) + 1;
+        }
+      });
+
+      // Add post counts and sort by popularity
+      const domainsWithCounts = domainsData
+        .map((domain) => ({
+          ...domain,
+          post_count: postCounts[domain.id] || 0,
+        }))
+        .sort((a, b) => b.post_count - a.post_count);
+
+      setDomains(domainsWithCounts);
     };
 
     checkAuth();
