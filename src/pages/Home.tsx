@@ -142,14 +142,13 @@ const Home = () => {
         `);
 
       if (domainsWithCounts) {
-        // Sort by post count and take top 8
+        // Sort by post count
         const sortedDomains = domainsWithCounts
           .map(domain => ({
             ...domain,
             post_count: domain.posts?.[0]?.count || 0
           }))
-          .sort((a, b) => b.post_count - a.post_count)
-          .slice(0, 8);
+          .sort((a, b) => b.post_count - a.post_count);
         
         setDomains(sortedDomains);
       }
