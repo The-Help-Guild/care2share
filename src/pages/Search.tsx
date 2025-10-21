@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Search as SearchIcon, Filter, Loader2 } from "lucide-react";
+import { Search as SearchIcon, Filter, Loader2, Users, MessageSquare, TrendingUp } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
@@ -20,6 +20,7 @@ import { NotificationCenter } from "@/components/NotificationCenter";
 import { StartConversationButton } from "@/components/StartConversationButton";
 import { CATEGORIES } from "@/lib/constants";
 import { getLocationAddress } from "@/lib/locationHelpers";
+import { formatDistanceToNow } from "date-fns";
 
 const searchInputSchema = z.object({
   query: z.string().max(200, "Search query too long (max 200 characters)"),
@@ -30,6 +31,8 @@ const Search = () => {
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
   const [results, setResults] = useState<any[]>([]);
+  const [postResults, setPostResults] = useState<any[]>([]);
+  const [supportResults, setSupportResults] = useState<any[]>([]);
   const [domains, setDomains] = useState<any[]>([]);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -71,6 +74,8 @@ const Search = () => {
   const performSearch = async (query: string, domainFilters: string[] = [], categoryFilters: string[] = [], location: string = "") => {
     if (!query.trim()) {
       setResults([]);
+      setPostResults([]);
+      setSupportResults([]);
       return;
     }
 
@@ -89,7 +94,11 @@ const Search = () => {
         }
       }
 
-      let queryBuilder = supabase
+      const searchLower = query.toLowerCase();
+      const locationLower = location.toLowerCase();
+
+      // Search profiles
+      let profileQuery = supabase
         .from("profiles")
         .select(`
           id,
@@ -105,27 +114,65 @@ const Search = () => {
           hobby_tags(tag)
         `);
 
-      // Apply domain filters
       if (domainFilters.length > 0) {
-        queryBuilder = queryBuilder.in("profile_domains.domain_id", domainFilters);
+        profileQuery = profileQuery.in("profile_domains.domain_id", domainFilters);
       }
 
-      const { data, error } = await queryBuilder;
+      // Search posts
+      let postQuery = supabase
+        .from("posts")
+        .select(`
+          id,
+          title,
+          content,
+          created_at,
+          user_id,
+          domain_id,
+          domains(name),
+          profiles(full_name, profile_photo_url)
+        `)
+        .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+        .order("created_at", { ascending: false })
+        .limit(20);
 
-      if (error) throw error;
+      if (domainFilters.length > 0) {
+        postQuery = postQuery.in("domain_id", domainFilters);
+      }
 
-      // Filter results based on search query and location
-      const searchLower = query.toLowerCase();
-      const locationLower = location.toLowerCase();
-      
-      const filtered = data?.filter((profile) => {
-        // Location filter - handle both JSON and plain string format
+      // Search support requests
+      const supportQuery = supabase
+        .from("support_requests")
+        .select(`
+          id,
+          title,
+          description,
+          category,
+          status,
+          created_at,
+          user_id,
+          profiles(full_name, profile_photo_url)
+        `)
+        .or(`title.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`)
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      const [profileData, postData, supportData] = await Promise.all([
+        profileQuery,
+        postQuery,
+        supportQuery
+      ]);
+
+      if (profileData.error) throw profileData.error;
+      if (postData.error) throw postData.error;
+      if (supportData.error) throw supportData.error;
+
+      // Filter and score profiles
+      const filtered = profileData.data?.filter((profile) => {
         const profileLocation = getLocationAddress(profile.location);
         if (locationLower && !profileLocation?.toLowerCase().includes(locationLower)) {
           return false;
         }
 
-        // Search query matches
         const nameMatch = profile.full_name.toLowerCase().includes(searchLower);
         const bioMatch = profile.bio?.toLowerCase().includes(searchLower);
         const locationMatch = profileLocation?.toLowerCase().includes(searchLower);
@@ -142,40 +189,32 @@ const Search = () => {
         return nameMatch || bioMatch || locationMatch || expertiseMatch || hobbyMatch || domainMatch;
       }) || [];
 
-      // Advanced matching: Score results by relevance
       const scored = filtered.map(profile => {
         let score = 0;
         
-        // Exact name match gets highest score
         if (profile.full_name.toLowerCase() === searchLower) score += 100;
         else if (profile.full_name.toLowerCase().includes(searchLower)) score += 50;
         
-        // Expertise matches (important)
         const expertiseMatches = profile.expertise_tags?.filter((e: any) =>
           e.tag.toLowerCase().includes(searchLower)
         ).length || 0;
         score += expertiseMatches * 30;
         
-        // Domain matches
         const domainMatches = profile.profile_domains?.filter((pd: any) =>
           pd.domains.name.toLowerCase().includes(searchLower)
         ).length || 0;
         score += domainMatches * 20;
         
-        // Hobby matches (lower priority)
         const hobbyMatches = profile.hobby_tags?.filter((h: any) =>
           h.tag.toLowerCase().includes(searchLower)
         ).length || 0;
         score += hobbyMatches * 10;
         
-        // Bio matches
         if (profile.bio?.toLowerCase().includes(searchLower)) score += 15;
         
-        // Location match bonus - handle both JSON and plain string format
         const profileLocation = getLocationAddress(profile.location);
         if (location && profileLocation?.toLowerCase().includes(locationLower)) score += 25;
         
-        // Category filtering - boost profiles matching selected categories
         if (categoryFilters.length > 0) {
           const allTags = [
             ...(profile.expertise_tags || []).map((t: any) => t.tag.toLowerCase()),
@@ -189,21 +228,23 @@ const Search = () => {
           ).length;
           
           if (categoryMatches > 0) {
-            score += categoryMatches * 40; // High boost for category matches
+            score += categoryMatches * 40;
           } else {
-            score -= 30; // Reduce score if doesn't match any selected categories
+            score -= 30;
           }
         }
         
         return { ...profile, relevance_score: score };
       });
 
-      // Sort by relevance score
       const sorted = scored.sort((a, b) => b.relevance_score - a.relevance_score);
 
       setResults(sorted);
+      setPostResults(postData.data || []);
+      setSupportResults(supportData.data || []);
     } catch (error: any) {
       console.error("Search error:", error);
+      toast.error("Search failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -410,71 +451,169 @@ const Search = () => {
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
-        ) : results.length > 0 ? (
-          <>
-            <p className="text-sm text-muted-foreground mb-4">
-              Found {results.length} {results.length === 1 ? "result" : "results"}
-            </p>
-            <div className="space-y-4">
-              {results.map((profile) => (
-                <Card
-                  key={profile.id}
-                  className="hover-lift cursor-pointer"
-                  onClick={() => navigate(`/profile/${profile.id}`)}
-                >
-                  <CardHeader>
-                    <div className="flex items-start gap-4">
-                      <Avatar className="h-16 w-16">
-                        <AvatarImage src={profile.profile_photo_url} />
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {getInitials(profile.full_name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="mb-2">{profile.full_name}</CardTitle>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                          {profile.bio || "No bio available"}
-                        </p>
-                        <div className="space-y-2">
-                          {profile.location && (
-                            <p className="text-xs text-muted-foreground">📍 {getLocationAddress(profile.location)}</p>
-                          )}
-                          <div className="flex flex-wrap gap-2">
-                            {profile.profile_domains?.slice(0, 3).map((pd: any, i: number) => (
-                              <Badge key={i} variant="secondary">
-                                {pd.domains.name}
-                              </Badge>
-                            ))}
-                            {profile.expertise_tags?.slice(0, 3).map((et: any, i: number) => (
-                              <Badge key={`e-${i}`} variant="outline">
-                                {et.tag}
-                              </Badge>
-                            ))}
+        ) : (results.length > 0 || postResults.length > 0 || supportResults.length > 0) ? (
+          <div className="space-y-8">
+            {/* People Results */}
+            {results.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  People ({results.length})
+                </h2>
+                <div className="space-y-4">
+                  {results.map((profile) => (
+                    <Card
+                      key={profile.id}
+                      className="hover-lift cursor-pointer"
+                      onClick={() => navigate(`/profile/${profile.id}`)}
+                    >
+                      <CardHeader>
+                        <div className="flex items-start gap-4">
+                          <Avatar className="h-16 w-16">
+                            <AvatarImage src={profile.profile_photo_url} />
+                            <AvatarFallback className="bg-primary text-primary-foreground">
+                              {getInitials(profile.full_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="mb-2">{profile.full_name}</CardTitle>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                              {profile.bio || "No bio available"}
+                            </p>
+                            <div className="space-y-2">
+                              {profile.location && (
+                                <p className="text-xs text-muted-foreground">📍 {getLocationAddress(profile.location)}</p>
+                              )}
+                              <div className="flex flex-wrap gap-2">
+                                {profile.profile_domains?.slice(0, 3).map((pd: any, i: number) => (
+                                  <Badge key={i} variant="secondary">
+                                    {pd.domains.name}
+                                  </Badge>
+                                ))}
+                                {profile.expertise_tags?.slice(0, 3).map((et: any, i: number) => (
+                                  <Badge key={`e-${i}`} variant="outline">
+                                    {et.tag}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Button variant="default" onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/profile/${profile.id}`);
+                            }}>
+                              View Profile
+                            </Button>
+                            {currentUserId && profile.id !== currentUserId && (
+                              <StartConversationButton
+                                targetUserId={profile.id}
+                                currentUserId={currentUserId}
+                                variant="outline"
+                                size="default"
+                              />
+                            )}
                           </div>
                         </div>
-                       </div>
-                      <div className="flex flex-col gap-2">
-                        <Button variant="default" onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/profile/${profile.id}`);
-                        }}>
-                          View Profile
-                        </Button>
-                        {currentUserId && profile.id !== currentUserId && (
-                          <StartConversationButton
-                            targetUserId={profile.id}
-                            currentUserId={currentUserId}
-                            variant="outline"
-                            size="default"
-                          />
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ))}
-            </div>
-          </>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Posts Results */}
+            {postResults.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5" />
+                  Posts ({postResults.length})
+                </h2>
+                <div className="space-y-4">
+                  {postResults.map((post) => (
+                    <Card
+                      key={post.id}
+                      className="hover-lift cursor-pointer"
+                      onClick={() => navigate(`/feed?post=${post.id}`)}
+                    >
+                      <CardHeader>
+                        <div className="flex items-start gap-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage src={post.profiles?.profile_photo_url} />
+                            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                              {getInitials(post.profiles?.full_name || "?")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <p className="font-semibold text-sm">{post.profiles?.full_name}</p>
+                              {post.domains && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {post.domains.name}
+                                </Badge>
+                              )}
+                            </div>
+                            <CardTitle className="text-lg mb-2">{post.title}</CardTitle>
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {post.content}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                            </p>
+                          </div>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Support Requests Results */}
+            {supportResults.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5" />
+                  Support Requests ({supportResults.length})
+                </h2>
+                <div className="space-y-4">
+                  {supportResults.map((request) => (
+                    <Card
+                      key={request.id}
+                      className="hover-lift cursor-pointer"
+                      onClick={() => navigate('/support')}
+                    >
+                      <CardHeader>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <CardTitle className="text-lg mb-2">{request.title}</CardTitle>
+                            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                              {request.description}
+                            </p>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2 text-sm text-muted-foreground">
+                              <Badge variant="outline" className="text-xs font-medium w-fit">
+                                {request.category}
+                              </Badge>
+                              <span className="hidden sm:inline">•</span>
+                              <span className="text-xs sm:text-sm">
+                                {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
+                              </span>
+                            </div>
+                          </div>
+                          <Avatar className="h-10 w-10 shrink-0">
+                            <AvatarImage src={request.profiles?.profile_photo_url} />
+                            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                              {getInitials(request.profiles?.full_name || "?")}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+                      </CardHeader>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         ) : searchQuery ? (
           <Card>
             <CardContent className="py-12 text-center">
@@ -492,7 +631,7 @@ const Search = () => {
             <CardContent className="py-12 text-center">
               <SearchIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">
-                Enter a search query to find community members
+                Search for people, posts, or support requests
               </p>
             </CardContent>
           </Card>
