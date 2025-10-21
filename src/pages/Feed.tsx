@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageSquare, Plus, Trash2, Pencil, Heart, Send } from "lucide-react";
+import { MessageSquare, Plus, Trash2, Pencil, Heart, Send, Upload, X, Youtube } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import imageCompression from "browser-image-compression";
 
 const Feed = () => {
   const [searchParams] = useSearchParams();
@@ -40,8 +41,11 @@ const Feed = () => {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [newPost, setNewPost] = useState({ title: "", content: "", domain_id: "" });
+  const [newPost, setNewPost] = useState({ title: "", content: "", domain_id: "", photo_url: "", youtube_url: "" });
   const [editingPost, setEditingPost] = useState<any>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string>("");
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [postLikes, setPostLikes] = useState<Record<string, { count: number; isLiked: boolean }>>({});
   const [comments, setComments] = useState<Record<string, any[]>>({});
@@ -167,13 +171,73 @@ const Feed = () => {
       .trim()
       .min(10, "Content must be at least 10 characters")
       .max(5000, "Content must be less than 5000 characters"),
-    domain_id: z.string().uuid().optional()
+    domain_id: z.string().uuid().optional(),
+    photo_url: z.string().url().optional().or(z.literal("")),
+    youtube_url: z.string().url().optional().or(z.literal(""))
   });
+
+  const extractYoutubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  };
+
+  const handlePhotoUpload = async (file: File) => {
+    if (!currentUser) return null;
+
+    try {
+      setUploadingPhoto(true);
+
+      // Compress image
+      const options = {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 1920,
+        useWebWorker: true
+      };
+      const compressedFile = await imageCompression(file, options);
+
+      // Upload to Supabase Storage
+      const fileExt = compressedFile.name.split('.').pop();
+      const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('post-photos')
+        .upload(fileName, compressedFile);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('post-photos')
+        .getPublicUrl(fileName);
+
+      return publicUrl;
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      toast({
+        title: "Error",
+        description: "Failed to upload photo",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   const handleCreatePost = async () => {
     if (!currentUser) return;
     
     try {
+      setUploadingPhoto(true);
+      
+      // Upload photo if exists
+      let photoUrl = newPost.photo_url;
+      if (photoFile) {
+        const uploadedUrl = await handlePhotoUpload(photoFile);
+        if (uploadedUrl) photoUrl = uploadedUrl;
+      }
+
       // Sanitize inputs (strip any HTML)
       const sanitizedTitle = DOMPurify.sanitize(newPost.title.trim(), {
         ALLOWED_TAGS: [],
@@ -188,13 +252,17 @@ const Feed = () => {
       const validated = postSchema.parse({
         title: sanitizedTitle,
         content: sanitizedContent,
-        domain_id: newPost.domain_id || undefined
+        domain_id: newPost.domain_id || undefined,
+        photo_url: photoUrl || "",
+        youtube_url: newPost.youtube_url || ""
       });
 
       const { error } = await supabase.from("posts").insert({
         title: validated.title,
         content: validated.content,
         domain_id: validated.domain_id || null,
+        photo_url: validated.photo_url || null,
+        youtube_url: validated.youtube_url || null,
         user_id: currentUser.id,
       });
 
@@ -204,7 +272,9 @@ const Feed = () => {
         description: "Post created successfully!",
       });
       
-      setNewPost({ title: "", content: "", domain_id: "" });
+      setNewPost({ title: "", content: "", domain_id: "", photo_url: "", youtube_url: "" });
+      setPhotoFile(null);
+      setPhotoPreview("");
       setIsCreateDialogOpen(false);
       loadPosts();
     } catch (error) {
@@ -221,6 +291,8 @@ const Feed = () => {
           variant: "destructive",
         });
       }
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -261,6 +333,15 @@ const Feed = () => {
     if (!currentUser || !editingPost) return;
     
     try {
+      setUploadingPhoto(true);
+
+      // Upload new photo if exists
+      let photoUrl = editingPost.photo_url;
+      if (photoFile) {
+        const uploadedUrl = await handlePhotoUpload(photoFile);
+        if (uploadedUrl) photoUrl = uploadedUrl;
+      }
+
       const sanitizedTitle = DOMPurify.sanitize(editingPost.title.trim(), {
         ALLOWED_TAGS: [],
         ALLOWED_ATTR: []
@@ -273,7 +354,9 @@ const Feed = () => {
       const validated = postSchema.parse({
         title: sanitizedTitle,
         content: sanitizedContent,
-        domain_id: editingPost.domain_id || undefined
+        domain_id: editingPost.domain_id || undefined,
+        photo_url: photoUrl || "",
+        youtube_url: editingPost.youtube_url || ""
       });
 
       const { error } = await supabase
@@ -282,6 +365,8 @@ const Feed = () => {
           title: validated.title,
           content: validated.content,
           domain_id: validated.domain_id || null,
+          photo_url: validated.photo_url || null,
+          youtube_url: validated.youtube_url || null,
         })
         .eq("id", editingPost.id)
         .eq("user_id", currentUser.id);
@@ -292,6 +377,8 @@ const Feed = () => {
         description: "Post updated successfully!",
       });
       
+      setPhotoFile(null);
+      setPhotoPreview("");
       setIsEditDialogOpen(false);
       setEditingPost(null);
       loadPosts();
@@ -309,6 +396,8 @@ const Feed = () => {
           variant: "destructive",
         });
       }
+    } finally {
+      setUploadingPhoto(false);
     }
   };
 
@@ -604,8 +693,66 @@ const Feed = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <Button onClick={handleCreatePost} className="w-full">
-                    Create Post
+                  
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Photo (Optional)</label>
+                    <div className="space-y-2">
+                      {photoPreview && (
+                        <div className="relative">
+                          <img src={photoPreview} alt="Preview" className="w-full h-48 object-cover rounded-lg" />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2"
+                            onClick={() => {
+                              setPhotoFile(null);
+                              setPhotoPreview("");
+                            }}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => document.getElementById('photo-upload-create')?.click()}
+                        disabled={uploadingPhoto}
+                      >
+                        <Upload className="h-4 w-4 mr-2" />
+                        {uploadingPhoto ? "Uploading..." : "Upload Photo"}
+                      </Button>
+                      <input
+                        id="photo-upload-create"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setPhotoFile(file);
+                            setPhotoPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">YouTube URL (Optional)</label>
+                    <div className="flex gap-2">
+                      <Youtube className="h-5 w-5 text-muted-foreground mt-2" />
+                      <Input
+                        value={newPost.youtube_url}
+                        onChange={(e) => setNewPost({ ...newPost, youtube_url: e.target.value })}
+                        placeholder="https://youtube.com/watch?v=..."
+                      />
+                    </div>
+                  </div>
+
+                  <Button onClick={handleCreatePost} className="w-full" disabled={uploadingPhoto}>
+                    {uploadingPhoto ? "Uploading..." : "Create Post"}
                   </Button>
                 </div>
               </DialogContent>
@@ -702,6 +849,31 @@ const Feed = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground whitespace-pre-wrap">{post.content}</p>
+                
+                {/* Photo Display */}
+                {post.photo_url && (
+                  <img 
+                    src={post.photo_url} 
+                    alt="Post" 
+                    className="w-full rounded-lg mt-4 max-h-96 object-cover"
+                  />
+                )}
+
+                {/* YouTube Preview */}
+                {post.youtube_url && extractYoutubeId(post.youtube_url) && (
+                  <div className="mt-4 rounded-lg overflow-hidden">
+                    <iframe
+                      width="100%"
+                      height="315"
+                      src={`https://www.youtube.com/embed/${extractYoutubeId(post.youtube_url)}`}
+                      title="YouTube video"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      className="w-full"
+                    />
+                  </div>
+                )}
                 
                 {/* Like and Comment Actions */}
                 <div className="flex items-center gap-4 mt-4 pt-4 border-t">
@@ -864,8 +1036,71 @@ const Feed = () => {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={handleEditPost} className="w-full">
-              Update Post
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">Photo (Optional)</label>
+              <div className="space-y-2">
+                {(photoPreview || editingPost?.photo_url) && (
+                  <div className="relative">
+                    <img 
+                      src={photoPreview || editingPost?.photo_url} 
+                      alt="Preview" 
+                      className="w-full h-48 object-cover rounded-lg" 
+                    />
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2"
+                      onClick={() => {
+                        setPhotoFile(null);
+                        setPhotoPreview("");
+                        setEditingPost({ ...editingPost, photo_url: "" });
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => document.getElementById('photo-upload-edit')?.click()}
+                  disabled={uploadingPhoto}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {uploadingPhoto ? "Uploading..." : "Upload Photo"}
+                </Button>
+                <input
+                  id="photo-upload-edit"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setPhotoFile(file);
+                      setPhotoPreview(URL.createObjectURL(file));
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">YouTube URL (Optional)</label>
+              <div className="flex gap-2">
+                <Youtube className="h-5 w-5 text-muted-foreground mt-2" />
+                <Input
+                  value={editingPost?.youtube_url || ""}
+                  onChange={(e) => setEditingPost({ ...editingPost, youtube_url: e.target.value })}
+                  placeholder="https://youtube.com/watch?v=..."
+                />
+              </div>
+            </div>
+
+            <Button onClick={handleEditPost} className="w-full" disabled={uploadingPhoto}>
+              {uploadingPhoto ? "Uploading..." : "Update Post"}
             </Button>
           </div>
         </DialogContent>
