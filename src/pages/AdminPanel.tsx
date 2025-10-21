@@ -158,70 +158,77 @@ const AdminPanel = () => {
 
   const loadAllActivities = async () => {
     try {
-      // Fetch admin actions
-      const { data: adminActionsData } = await supabase
-        .from('admin_actions')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(50);
+      const [adminActionsRes, postsRes, supportReqsRes, supportRepliesRes] = await Promise.all([
+        supabase.from('admin_actions').select('*').order('created_at', { ascending: false }).limit(50),
+        supabase.from('posts').select('id, title, content, created_at, user_id').order('created_at', { ascending: false }).limit(50),
+        supabase.from('support_requests').select('id, title, description, category, status, created_at, user_id').order('created_at', { ascending: false }).limit(50),
+        supabase.from('support_request_replies').select('id, content, created_at, user_id, request_id').order('created_at', { ascending: false }).limit(50),
+      ]);
 
-      // Fetch posts with user info
-      const { data: postsData } = await supabase
-        .from('posts')
-        .select('*, profiles(full_name, email)')
-        .order('created_at', { ascending: false })
-        .limit(50);
+      const adminActionsData = adminActionsRes.data || [];
+      const postsData = postsRes.data || [];
+      const supportRequestsData = supportReqsRes.data || [];
+      const supportRepliesData = supportRepliesRes.data || [];
 
-      // Fetch support requests with user info
-      const { data: supportRequestsData } = await supabase
-        .from('support_requests')
-        .select('*, profiles(full_name, email)')
-        .order('created_at', { ascending: false })
-        .limit(50);
+      // Build a user map to avoid joins
+      const userIds = new Set<string>();
+      postsData.forEach((p: any) => userIds.add(p.user_id));
+      supportRequestsData.forEach((s: any) => userIds.add(s.user_id));
+      supportRepliesData.forEach((r: any) => userIds.add(r.user_id));
 
-      // Fetch support replies with user info
-      const { data: supportRepliesData } = await supabase
-        .from('support_request_replies')
-        .select('*, profiles(full_name, email), support_requests(title)')
-        .order('created_at', { ascending: false })
-        .limit(50);
+      let profilesMap = new Map<string, { full_name: string; email: string }>();
+      if (userIds.size > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', Array.from(userIds));
+        profilesData?.forEach((p: any) => {
+          profilesMap.set(p.id, { full_name: p.full_name, email: p.email });
+        });
+      }
+
+      // Build a map of support request titles for replies
+      const requestIds = new Set<string>();
+      supportRepliesData.forEach((r: any) => requestIds.add(r.request_id));
+      let requestTitleMap = new Map<string, string>();
+      if (requestIds.size > 0) {
+        const { data: reqData } = await supabase
+          .from('support_requests')
+          .select('id, title')
+          .in('id', Array.from(requestIds));
+        reqData?.forEach((r: any) => requestTitleMap.set(r.id, r.title));
+      }
 
       // Combine all activities
       const combined: ActivityItem[] = [
-        ...(adminActionsData?.map(a => ({ type: 'admin_action' as const, data: a })) || []),
-        ...(postsData?.map(p => ({ 
-          type: 'post' as const, 
-          data: {
-            ...p,
-            profiles: Array.isArray(p.profiles) ? p.profiles[0] : p.profiles
-          }
+        ...(adminActionsData.map((a: any) => ({ type: 'admin_action' as const, data: a })) || []),
+        ...(postsData.map((p: any) => ({
+          type: 'post' as const,
+          data: { ...p, profiles: profilesMap.get(p.user_id) || null },
         })) || []),
-        ...(supportRequestsData?.map(s => ({ 
-          type: 'support_request' as const, 
-          data: {
-            ...s,
-            profiles: Array.isArray(s.profiles) ? s.profiles[0] : s.profiles
-          }
+        ...(supportRequestsData.map((s: any) => ({
+          type: 'support_request' as const,
+          data: { ...s, profiles: profilesMap.get(s.user_id) || null },
         })) || []),
-        ...(supportRepliesData?.map(r => ({ 
-          type: 'support_reply' as const, 
+        ...(supportRepliesData.map((r: any) => ({
+          type: 'support_reply' as const,
           data: {
             ...r,
-            profiles: Array.isArray(r.profiles) ? r.profiles[0] : r.profiles,
-            support_requests: Array.isArray(r.support_requests) ? r.support_requests[0] : r.support_requests
-          }
-        })) || [])
+            profiles: profilesMap.get(r.user_id) || null,
+            support_requests: { title: requestTitleMap.get(r.request_id) || '' },
+          },
+        })) || []),
       ];
 
       // Sort by created_at
-      combined.sort((a, b) => 
-        new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime()
+      combined.sort(
+        (a, b) => new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime(),
       );
 
       setActivities(combined);
     } catch (error: any) {
-      console.error("Failed to load activities:", error);
-      toast.error("Failed to load activity log");
+      console.error('Failed to load activities:', error);
+      toast.error('Failed to load activity log');
     }
   };
 
