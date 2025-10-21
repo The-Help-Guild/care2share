@@ -50,7 +50,7 @@ const Home = () => {
     };
 
     const loadRecentProfiles = async () => {
-      // Fetch profiles first
+      // 1) Fetch profiles
       const { data: profilesData } = await supabase
         .from("profiles")
         .select(`
@@ -66,31 +66,43 @@ const Home = () => {
         .order("created_at", { ascending: false })
         .limit(6);
 
-      if (profilesData && profilesData.length > 0) {
-        // Fetch profile_domains with domains for these profiles
-        const profileIds = profilesData.map(p => p.id);
-        
-        const { data: profileDomainsData } = await supabase
-          .from("profile_domains")
-          .select(`
-            profile_id,
-            domain_id,
-            domains!inner(name)
-          `)
-          .in('profile_id', profileIds);
-
-        // Merge domains into profiles
-        const enrichedProfiles = profilesData.map(profile => ({
-          ...profile,
-          profile_domains: profileDomainsData
-            ?.filter(pd => pd.profile_id === profile.id)
-            .map(pd => ({ domains: { name: pd.domains.name } })) || []
-        }));
-
-        setRecentProfiles(enrichedProfiles);
-      } else {
+      if (!profilesData || profilesData.length === 0) {
         setRecentProfiles([]);
+        setLoading(false);
+        return;
       }
+
+      // 2) Fetch profile_domains (no embedded join dependency)
+      const profileIds = profilesData.map((p) => p.id);
+      const { data: profileDomains } = await supabase
+        .from("profile_domains")
+        .select("profile_id, domain_id")
+        .in("profile_id", profileIds);
+
+      // 3) Fetch all referenced domains in one query
+      const domainIds = Array.from(new Set((profileDomains || []).map((pd) => pd.domain_id)));
+      let domainsById: Record<string, { id: string; name: string }> = {};
+      if (domainIds.length > 0) {
+        const { data: domainsData } = await supabase
+          .from("domains")
+          .select("id, name")
+          .in("id", domainIds);
+        (domainsData || []).forEach((d) => {
+          domainsById[d.id as string] = { id: d.id as string, name: d.name as string };
+        });
+      }
+
+      // 4) Merge back into profiles in the previous shape used by UI
+      const enrichedProfiles = profilesData.map((profile) => {
+        const pds = (profileDomains || []).filter((pd) => pd.profile_id === profile.id);
+        const mapped = pds
+          .map((pd) => domainsById[pd.domain_id as string])
+          .filter(Boolean)
+          .map((d) => ({ domains: { name: d.name } }));
+        return { ...profile, profile_domains: mapped };
+      });
+
+      setRecentProfiles(enrichedProfiles);
       setLoading(false);
     };
 
@@ -130,27 +142,16 @@ const Home = () => {
     };
 
     const loadDomains = async () => {
-      // Fetch domains with their post counts
-      const { data: domainsWithCounts } = await supabase
+      // Fetch ALL domains without embedded relations to avoid FK dependency
+      const { data } = await supabase
         .from("domains")
-        .select(`
-          id,
-          name,
-          icon,
-          created_at,
-          posts(count)
-        `);
+        .select("id, name, icon, created_at")
+        .order("name", { ascending: true });
 
-      if (domainsWithCounts) {
-        // Sort by post count
-        const sortedDomains = domainsWithCounts
-          .map(domain => ({
-            ...domain,
-            post_count: domain.posts?.[0]?.count || 0
-          }))
-          .sort((a, b) => b.post_count - a.post_count);
-        
-        setDomains(sortedDomains);
+      if (data) {
+        setDomains(data);
+      } else {
+        setDomains([]);
       }
     };
 
