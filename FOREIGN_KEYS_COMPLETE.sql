@@ -99,10 +99,16 @@ DELETE FROM rate_limit_audit WHERE user_id NOT IN (SELECT id FROM profiles);
 
 -- Posts table
 ALTER TABLE public.posts
+DROP CONSTRAINT IF EXISTS posts_user_id_fkey;
+
+ALTER TABLE public.posts
 ADD CONSTRAINT posts_user_id_fkey 
 FOREIGN KEY (user_id) 
 REFERENCES public.profiles(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.posts
+DROP CONSTRAINT IF EXISTS posts_domain_id_fkey;
 
 ALTER TABLE public.posts
 ADD CONSTRAINT posts_domain_id_fkey 
@@ -112,10 +118,16 @@ ON DELETE SET NULL;
 
 -- Profile domains (junction table)
 ALTER TABLE public.profile_domains
+DROP CONSTRAINT IF EXISTS profile_domains_profile_id_fkey;
+
+ALTER TABLE public.profile_domains
 ADD CONSTRAINT profile_domains_profile_id_fkey 
 FOREIGN KEY (profile_id) 
 REFERENCES public.profiles(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.profile_domains
+DROP CONSTRAINT IF EXISTS profile_domains_domain_id_fkey;
 
 ALTER TABLE public.profile_domains
 ADD CONSTRAINT profile_domains_domain_id_fkey 
@@ -125,12 +137,18 @@ ON DELETE CASCADE;
 
 -- Expertise tags
 ALTER TABLE public.expertise_tags
+DROP CONSTRAINT IF EXISTS expertise_tags_profile_id_fkey;
+
+ALTER TABLE public.expertise_tags
 ADD CONSTRAINT expertise_tags_profile_id_fkey 
 FOREIGN KEY (profile_id) 
 REFERENCES public.profiles(id) 
 ON DELETE CASCADE;
 
 -- Hobby tags
+ALTER TABLE public.hobby_tags
+DROP CONSTRAINT IF EXISTS hobby_tags_profile_id_fkey;
+
 ALTER TABLE public.hobby_tags
 ADD CONSTRAINT hobby_tags_profile_id_fkey 
 FOREIGN KEY (profile_id) 
@@ -139,6 +157,9 @@ ON DELETE CASCADE;
 
 -- Support requests
 ALTER TABLE public.support_requests
+DROP CONSTRAINT IF EXISTS support_requests_user_id_fkey;
+
+ALTER TABLE public.support_requests
 ADD CONSTRAINT support_requests_user_id_fkey 
 FOREIGN KEY (user_id) 
 REFERENCES public.profiles(id) 
@@ -146,10 +167,16 @@ ON DELETE CASCADE;
 
 -- User roles
 ALTER TABLE public.user_roles
+DROP CONSTRAINT IF EXISTS user_roles_user_id_fkey;
+
+ALTER TABLE public.user_roles
 ADD CONSTRAINT user_roles_user_id_fkey 
 FOREIGN KEY (user_id) 
 REFERENCES public.profiles(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.user_roles
+DROP CONSTRAINT IF EXISTS user_roles_created_by_fkey;
 
 ALTER TABLE public.user_roles
 ADD CONSTRAINT user_roles_created_by_fkey 
@@ -159,10 +186,16 @@ ON DELETE SET NULL;
 
 -- Blocked users
 ALTER TABLE public.blocked_users
+DROP CONSTRAINT IF EXISTS blocked_users_blocker_user_id_fkey;
+
+ALTER TABLE public.blocked_users
 ADD CONSTRAINT blocked_users_blocker_user_id_fkey 
 FOREIGN KEY (blocker_user_id) 
 REFERENCES public.profiles(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.blocked_users
+DROP CONSTRAINT IF EXISTS blocked_users_blocked_user_id_fkey;
 
 ALTER TABLE public.blocked_users
 ADD CONSTRAINT blocked_users_blocked_user_id_fkey 
@@ -172,16 +205,25 @@ ON DELETE CASCADE;
 
 -- User reports
 ALTER TABLE public.user_reports
+DROP CONSTRAINT IF EXISTS user_reports_reporter_id_fkey;
+
+ALTER TABLE public.user_reports
 ADD CONSTRAINT user_reports_reporter_id_fkey 
 FOREIGN KEY (reporter_id) 
 REFERENCES public.profiles(id) 
 ON DELETE CASCADE;
 
 ALTER TABLE public.user_reports
+DROP CONSTRAINT IF EXISTS user_reports_reported_user_id_fkey;
+
+ALTER TABLE public.user_reports
 ADD CONSTRAINT user_reports_reported_user_id_fkey 
 FOREIGN KEY (reported_user_id) 
 REFERENCES public.profiles(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.user_reports
+DROP CONSTRAINT IF EXISTS user_reports_reviewed_by_fkey;
 
 ALTER TABLE public.user_reports
 ADD CONSTRAINT user_reports_reviewed_by_fkey 
@@ -191,10 +233,16 @@ ON DELETE SET NULL;
 
 -- Conversation participants
 ALTER TABLE public.conversation_participants
+DROP CONSTRAINT IF EXISTS conversation_participants_conversation_id_fkey;
+
+ALTER TABLE public.conversation_participants
 ADD CONSTRAINT conversation_participants_conversation_id_fkey 
 FOREIGN KEY (conversation_id) 
 REFERENCES public.conversations(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.conversation_participants
+DROP CONSTRAINT IF EXISTS conversation_participants_user_id_fkey;
 
 ALTER TABLE public.conversation_participants
 ADD CONSTRAINT conversation_participants_user_id_fkey 
@@ -204,6 +252,9 @@ ON DELETE CASCADE;
 
 -- Notifications
 ALTER TABLE public.notifications
+DROP CONSTRAINT IF EXISTS notifications_user_id_fkey;
+
+ALTER TABLE public.notifications
 ADD CONSTRAINT notifications_user_id_fkey 
 FOREIGN KEY (user_id) 
 REFERENCES public.profiles(id) 
@@ -211,10 +262,16 @@ ON DELETE CASCADE;
 
 -- Admin actions
 ALTER TABLE public.admin_actions
+DROP CONSTRAINT IF EXISTS admin_actions_admin_id_fkey;
+
+ALTER TABLE public.admin_actions
 ADD CONSTRAINT admin_actions_admin_id_fkey 
 FOREIGN KEY (admin_id) 
 REFERENCES public.profiles(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.admin_actions
+DROP CONSTRAINT IF EXISTS admin_actions_target_user_id_fkey;
 
 ALTER TABLE public.admin_actions
 ADD CONSTRAINT admin_actions_target_user_id_fkey 
@@ -223,6 +280,9 @@ REFERENCES public.profiles(id)
 ON DELETE SET NULL;
 
 -- Rate limit audit
+ALTER TABLE public.rate_limit_audit
+DROP CONSTRAINT IF EXISTS rate_limit_audit_user_id_fkey;
+
 ALTER TABLE public.rate_limit_audit
 ADD CONSTRAINT rate_limit_audit_user_id_fkey 
 FOREIGN KEY (user_id) 
@@ -235,10 +295,16 @@ ON DELETE CASCADE;
 
 -- Comments
 ALTER TABLE public.comments
+DROP CONSTRAINT IF EXISTS comments_post_id_fkey;
+
+ALTER TABLE public.comments
 ADD CONSTRAINT comments_post_id_fkey 
 FOREIGN KEY (post_id) 
 REFERENCES public.posts(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.comments
+DROP CONSTRAINT IF EXISTS comments_user_id_fkey;
 
 ALTER TABLE public.comments
 ADD CONSTRAINT comments_user_id_fkey 
@@ -248,10 +314,16 @@ ON DELETE CASCADE;
 
 -- Post likes
 ALTER TABLE public.post_likes
+DROP CONSTRAINT IF EXISTS post_likes_post_id_fkey;
+
+ALTER TABLE public.post_likes
 ADD CONSTRAINT post_likes_post_id_fkey 
 FOREIGN KEY (post_id) 
 REFERENCES public.posts(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.post_likes
+DROP CONSTRAINT IF EXISTS post_likes_user_id_fkey;
 
 ALTER TABLE public.post_likes
 ADD CONSTRAINT post_likes_user_id_fkey 
@@ -265,10 +337,16 @@ ON DELETE CASCADE;
 
 -- Comment likes
 ALTER TABLE public.comment_likes
+DROP CONSTRAINT IF EXISTS comment_likes_comment_id_fkey;
+
+ALTER TABLE public.comment_likes
 ADD CONSTRAINT comment_likes_comment_id_fkey 
 FOREIGN KEY (comment_id) 
 REFERENCES public.comments(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.comment_likes
+DROP CONSTRAINT IF EXISTS comment_likes_user_id_fkey;
 
 ALTER TABLE public.comment_likes
 ADD CONSTRAINT comment_likes_user_id_fkey 
@@ -282,16 +360,25 @@ ON DELETE CASCADE;
 
 -- Support request replies (with self-referential FK)
 ALTER TABLE public.support_request_replies
+DROP CONSTRAINT IF EXISTS support_request_replies_request_id_fkey;
+
+ALTER TABLE public.support_request_replies
 ADD CONSTRAINT support_request_replies_request_id_fkey 
 FOREIGN KEY (request_id) 
 REFERENCES public.support_requests(id) 
 ON DELETE CASCADE;
 
 ALTER TABLE public.support_request_replies
+DROP CONSTRAINT IF EXISTS support_request_replies_user_id_fkey;
+
+ALTER TABLE public.support_request_replies
 ADD CONSTRAINT support_request_replies_user_id_fkey 
 FOREIGN KEY (user_id) 
 REFERENCES public.profiles(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.support_request_replies
+DROP CONSTRAINT IF EXISTS support_request_replies_parent_reply_id_fkey;
 
 ALTER TABLE public.support_request_replies
 ADD CONSTRAINT support_request_replies_parent_reply_id_fkey 
@@ -305,16 +392,25 @@ ON DELETE CASCADE;
 
 -- Messages (with self-referential FK for replies)
 ALTER TABLE public.messages
+DROP CONSTRAINT IF EXISTS messages_conversation_id_fkey;
+
+ALTER TABLE public.messages
 ADD CONSTRAINT messages_conversation_id_fkey 
 FOREIGN KEY (conversation_id) 
 REFERENCES public.conversations(id) 
 ON DELETE CASCADE;
 
 ALTER TABLE public.messages
+DROP CONSTRAINT IF EXISTS messages_sender_id_fkey;
+
+ALTER TABLE public.messages
 ADD CONSTRAINT messages_sender_id_fkey 
 FOREIGN KEY (sender_id) 
 REFERENCES public.profiles(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.messages
+DROP CONSTRAINT IF EXISTS messages_reply_to_id_fkey;
 
 ALTER TABLE public.messages
 ADD CONSTRAINT messages_reply_to_id_fkey 
@@ -324,10 +420,16 @@ ON DELETE SET NULL;
 
 -- Typing indicators
 ALTER TABLE public.typing_indicators
+DROP CONSTRAINT IF EXISTS typing_indicators_conversation_id_fkey;
+
+ALTER TABLE public.typing_indicators
 ADD CONSTRAINT typing_indicators_conversation_id_fkey 
 FOREIGN KEY (conversation_id) 
 REFERENCES public.conversations(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.typing_indicators
+DROP CONSTRAINT IF EXISTS typing_indicators_user_id_fkey;
 
 ALTER TABLE public.typing_indicators
 ADD CONSTRAINT typing_indicators_user_id_fkey 
@@ -341,10 +443,16 @@ ON DELETE CASCADE;
 
 -- Message mentions
 ALTER TABLE public.message_mentions
+DROP CONSTRAINT IF EXISTS message_mentions_message_id_fkey;
+
+ALTER TABLE public.message_mentions
 ADD CONSTRAINT message_mentions_message_id_fkey 
 FOREIGN KEY (message_id) 
 REFERENCES public.messages(id) 
 ON DELETE CASCADE;
+
+ALTER TABLE public.message_mentions
+DROP CONSTRAINT IF EXISTS message_mentions_mentioned_user_id_fkey;
 
 ALTER TABLE public.message_mentions
 ADD CONSTRAINT message_mentions_mentioned_user_id_fkey 
