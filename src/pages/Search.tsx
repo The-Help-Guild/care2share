@@ -128,8 +128,7 @@ const Search = () => {
           created_at,
           user_id,
           domain_id,
-          domains(name),
-          profiles(full_name, profile_photo_url)
+          domains(name)
         `)
         .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
         .order("created_at", { ascending: false })
@@ -149,8 +148,7 @@ const Search = () => {
           category,
           status,
           created_at,
-          user_id,
-          profiles(full_name, profile_photo_url)
+          user_id
         `)
         .or(`title.ilike.%${query}%,description.ilike.%${query}%,category.ilike.%${query}%`)
         .order("created_at", { ascending: false })
@@ -165,6 +163,30 @@ const Search = () => {
       if (profileData.error) throw profileData.error;
       if (postData.error) throw postData.error;
       if (supportData.error) throw supportData.error;
+
+      // Fetch profiles for posts
+      const postsWithProfiles = await Promise.all(
+        (postData.data || []).map(async (post) => {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, profile_photo_url")
+            .eq("id", post.user_id)
+            .single();
+          return { ...post, profiles: profile };
+        })
+      );
+
+      // Fetch profiles for support requests
+      const supportWithProfiles = await Promise.all(
+        (supportData.data || []).map(async (request) => {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, profile_photo_url")
+            .eq("id", request.user_id)
+            .single();
+          return { ...request, profiles: profile };
+        })
+      );
 
       // Filter and score profiles
       const filtered = profileData.data?.filter((profile) => {
@@ -240,8 +262,8 @@ const Search = () => {
       const sorted = scored.sort((a, b) => b.relevance_score - a.relevance_score);
 
       setResults(sorted);
-      setPostResults(postData.data || []);
-      setSupportResults(supportData.data || []);
+      setPostResults(postsWithProfiles);
+      setSupportResults(supportWithProfiles);
     } catch (error: any) {
       console.error("Search error:", error);
       toast.error("Search failed. Please try again.");
