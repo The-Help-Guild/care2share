@@ -335,12 +335,12 @@ const Search = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <header className="bg-card border-b sticky top-0 z-10 shadow-soft">
-        <div className="max-w-6xl mx-auto p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-primary">
+        <div className="max-w-6xl mx-auto p-3 sm:p-4">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <h1 className="text-lg sm:text-2xl font-bold text-primary">
               Search Community
             </h1>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <NotificationCenter />
               <ThemeToggle />
               <UserMenu />
@@ -349,22 +349,22 @@ const Search = () => {
           
           <div className="flex gap-2">
             <div className="flex-1 relative">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSearch()}
                 placeholder="Search for skills, people, or services..."
-                className="pl-10 h-12 text-base"
+                className="pl-9 sm:pl-10 h-10 sm:h-12 text-sm sm:text-base"
               />
             </div>
-            <Button onClick={handleSearch} size="lg" className="px-8">
+            <Button onClick={handleSearch} size="default" className="px-4 sm:px-8 h-10 sm:h-12">
               Search
             </Button>
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline" size="lg">
-                  <Filter className="h-5 w-5" />
+                <Button variant="outline" size="default" className="h-10 sm:h-12 px-3 sm:px-4">
+                  <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent>
@@ -468,7 +468,7 @@ const Search = () => {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-4">
+      <main className="max-w-6xl mx-auto p-3 sm:p-4">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -489,16 +489,16 @@ const Search = () => {
                       className="hover-lift cursor-pointer"
                       onClick={() => navigate(`/profile/${profile.id}`)}
                     >
-                      <CardHeader>
-                        <div className="flex items-start gap-4">
-                          <Avatar className="h-16 w-16">
+                      <CardHeader className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row items-start gap-4">
+                          <Avatar className="h-16 w-16 sm:h-16 sm:w-16">
                             <AvatarImage src={profile.profile_photo_url} />
                             <AvatarFallback className="bg-primary text-primary-foreground">
                               {getInitials(profile.full_name)}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <CardTitle className="mb-2">{profile.full_name}</CardTitle>
+                          <div className="flex-1 min-w-0 w-full">
+                            <CardTitle className="text-lg mb-2">{profile.full_name}</CardTitle>
                             <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                               {profile.bio || "No bio available"}
                             </p>
@@ -508,23 +508,27 @@ const Search = () => {
                               )}
                               <div className="flex flex-wrap gap-2">
                                 {profile.profile_domains?.slice(0, 3).map((pd: any, i: number) => (
-                                  <Badge key={i} variant="secondary">
+                                  <Badge key={i} variant="secondary" className="text-xs">
                                     {pd.domains.name}
                                   </Badge>
                                 ))}
                                 {profile.expertise_tags?.slice(0, 3).map((et: any, i: number) => (
-                                  <Badge key={`e-${i}`} variant="outline">
+                                  <Badge key={`e-${i}`} variant="outline" className="text-xs">
                                     {et.tag}
                                   </Badge>
                                 ))}
                               </div>
                             </div>
                           </div>
-                          <div className="flex flex-col gap-2">
-                            <Button variant="default" onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/profile/${profile.id}`);
-                            }}>
+                          <div className="flex sm:flex-col gap-2 w-full sm:w-auto">
+                            <Button 
+                              variant="default" 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/profile/${profile.id}`);
+                              }}
+                              className="flex-1 sm:flex-none sm:min-w-[120px]"
+                            >
                               View Profile
                             </Button>
                             {currentUserId && profile.id !== currentUserId && (
@@ -533,6 +537,7 @@ const Search = () => {
                                 currentUserId={currentUserId}
                                 variant="outline"
                                 size="default"
+                                className="flex-1 sm:flex-none"
                               />
                             )}
                           </div>
@@ -558,24 +563,24 @@ const Search = () => {
                       className="hover-lift cursor-pointer"
                       onClick={() => navigate(`/feed?post=${post.id}`)}
                     >
-                      <CardHeader>
+                      <CardHeader className="p-4 sm:p-6">
                         <div className="flex items-start gap-3">
-                          <Avatar className="h-10 w-10">
+                          <Avatar className="h-10 w-10 shrink-0">
                             <AvatarImage src={post.profiles?.profile_photo_url} />
                             <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                               {getInitials(post.profiles?.full_name || "?")}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mb-2">
                               <p className="font-semibold text-sm">{post.profiles?.full_name}</p>
                               {post.domains && (
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-xs w-fit">
                                   {post.domains.name}
                                 </Badge>
                               )}
                             </div>
-                            <CardTitle className="text-lg mb-2">{post.title}</CardTitle>
+                            <CardTitle className="text-base sm:text-lg mb-2">{post.title}</CardTitle>
                             <p className="text-sm text-muted-foreground line-clamp-2">
                               {post.content}
                             </p>
@@ -605,24 +610,24 @@ const Search = () => {
                       className="hover-lift cursor-pointer"
                       onClick={() => navigate('/support')}
                     >
-                      <CardHeader>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <CardTitle className="text-lg mb-2">{request.title}</CardTitle>
+                      <CardHeader className="p-4 sm:p-6">
+                        <div className="flex flex-col sm:flex-row items-start gap-3">
+                          <div className="flex-1 min-w-0 w-full">
+                            <CardTitle className="text-base sm:text-lg mb-2">{request.title}</CardTitle>
                             <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                               {request.description}
                             </p>
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-2 text-sm text-muted-foreground">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm text-muted-foreground">
                               <Badge variant="outline" className="text-xs font-medium w-fit">
                                 {request.category}
                               </Badge>
                               <span className="hidden sm:inline">•</span>
-                              <span className="text-xs sm:text-sm">
+                              <span className="text-xs">
                                 {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
                               </span>
                             </div>
                           </div>
-                          <Avatar className="h-10 w-10 shrink-0">
+                          <Avatar className="h-10 w-10 shrink-0 sm:order-last order-first self-end sm:self-auto">
                             <AvatarImage src={request.profiles?.profile_photo_url} />
                             <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                               {getInitials(request.profiles?.full_name || "?")}
