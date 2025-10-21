@@ -109,12 +109,29 @@ const Home = () => {
     };
 
     const loadDomains = async () => {
-      const { data } = await supabase
+      // Fetch domains with their post counts
+      const { data: domainsWithCounts } = await supabase
         .from("domains")
-        .select("*")
-        .order("name", { ascending: true });
+        .select(`
+          id,
+          name,
+          icon,
+          created_at,
+          posts(count)
+        `);
 
-      if (data) setDomains(data);
+      if (domainsWithCounts) {
+        // Sort by post count and take top 8
+        const sortedDomains = domainsWithCounts
+          .map(domain => ({
+            ...domain,
+            post_count: domain.posts?.[0]?.count || 0
+          }))
+          .sort((a, b) => b.post_count - a.post_count)
+          .slice(0, 8);
+        
+        setDomains(sortedDomains);
+      }
     };
 
     checkAuth();
