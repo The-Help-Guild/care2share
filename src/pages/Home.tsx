@@ -449,44 +449,70 @@ const Home = () => {
               {latestEvents.map((event) => {
                 const poll = eventPolls[event.id];
                 const totalVotes = poll ? poll.options.reduce((sum: number, opt: any) => sum + opt.votes, 0) : 0;
+                const isAnnouncement = event.type === "announcement";
 
                 return (
                   <Card 
                     key={event.id}
-                    className="hover-lift cursor-pointer border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5"
+                    className={`hover-lift cursor-pointer ${
+                      isAnnouncement 
+                        ? "border-border bg-card" 
+                        : "border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5"
+                    }`}
                     onClick={() => navigate('/events')}
                   >
-                    <CardHeader>
-                      <div className="flex items-start gap-3">
-                        <div className={`p-3 rounded-lg ${event.type === "event" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent-foreground"}`}>
-                          {event.type === "event" ? <Calendar className="h-6 w-6" /> : <Megaphone className="h-6 w-6" />}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
+                    <CardHeader className={isAnnouncement ? "space-y-4" : ""}>
+                      {isAnnouncement ? (
+                        <>
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-accent/10 text-accent-foreground">
+                              <Megaphone className="h-5 w-5" />
+                            </div>
                             <Badge variant="secondary" className="text-xs">
-                              {event.type === "event" ? "Event" : "Announcement"}
+                              Announcement
                             </Badge>
                           </div>
-                          <CardTitle className="text-lg">{event.title}</CardTitle>
-                          {event.type === "event" && event.event_date && (
-                            <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-4 w-4" />
-                                {format(new Date(event.event_date), "PPp")}
-                              </span>
-                              {event.location && (
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="h-4 w-4" />
-                                  {event.location}
-                                </span>
-                              )}
+                          <div>
+                            <CardTitle className="text-xl flex items-center gap-2">
+                              🔔 {event.title}
+                            </CardTitle>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-start gap-3">
+                          <div className="p-3 rounded-lg bg-primary/10 text-primary">
+                            <Calendar className="h-6 w-6" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="secondary" className="text-xs">
+                                Event
+                              </Badge>
                             </div>
-                          )}
+                            <CardTitle className="text-lg">{event.title}</CardTitle>
+                            {event.event_date && (
+                              <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-4 w-4" />
+                                  {format(new Date(event.event_date), "PPp")}
+                                </span>
+                                {event.location && (
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="h-4 w-4" />
+                                    {event.location}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <MentionText text={event.description} className="text-sm text-muted-foreground line-clamp-3" />
+                      <MentionText 
+                        text={event.description} 
+                        className={`text-sm ${isAnnouncement ? "text-foreground" : "text-muted-foreground"} line-clamp-4`}
+                      />
 
                       {poll && (
                         <div className="border-t pt-4" onClick={(e) => e.stopPropagation()}>
