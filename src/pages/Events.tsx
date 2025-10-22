@@ -11,6 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Calendar, MapPin, Megaphone, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import BottomNav from "@/components/BottomNav";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import UserMenu from "@/components/UserMenu";
+import { NotificationCenter } from "@/components/NotificationCenter";
 
 interface Event {
   id: string;
@@ -267,10 +271,23 @@ export default function Events() {
   const totalVotes = (poll: Poll) => poll.options.reduce((sum, opt) => sum + opt.votes, 0);
 
   return (
-    <div className="container py-8 max-w-4xl">
-      <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-background pb-20">
+      <header className="bg-card border-b border-border sticky top-0 z-10 shadow-md">
+        <div className="max-w-4xl mx-auto px-4 py-5">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold tracking-tight">Events & Announcements</h1>
+            <div className="flex items-center gap-2">
+              <NotificationCenter />
+              <ThemeToggle />
+              <UserMenu />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div className="container py-8 max-w-4xl">
+        <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Events & Announcements</h1>
           <p className="text-muted-foreground mt-1">Stay updated with community events and news</p>
         </div>
         {isAdmin && (
@@ -438,6 +455,8 @@ export default function Events() {
           ))
         )}
       </div>
+      </div>
+      <BottomNav />
     </div>
   );
 }
