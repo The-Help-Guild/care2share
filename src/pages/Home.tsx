@@ -22,6 +22,7 @@ const Home = () => {
   const [recentProfiles, setRecentProfiles] = useState<any[]>([]);
   const [supportRequests, setSupportRequests] = useState<any[]>([]);
   const [domains, setDomains] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Array<{ name: string; count: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -176,10 +177,39 @@ const Home = () => {
       setDomains(domainsWithCounts);
     };
 
+    const loadCategories = async () => {
+      // Fetch all support requests
+      const { data: requestsData } = await supabase
+        .from("support_requests")
+        .select("category");
+
+      if (!requestsData) {
+        setCategories([]);
+        return;
+      }
+
+      // Count requests per category
+      const categoryCounts: Record<string, number> = {};
+      requestsData.forEach((request) => {
+        if (request.category) {
+          categoryCounts[request.category] = (categoryCounts[request.category] || 0) + 1;
+        }
+      });
+
+      // Convert to array and sort by count
+      const sortedCategories = Object.entries(categoryCounts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 4); // Show top 4
+
+      setCategories(sortedCategories);
+    };
+
     checkAuth();
     loadRecentProfiles();
     loadSupportRequests();
     loadDomains();
+    loadCategories();
 
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -432,14 +462,15 @@ const Home = () => {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {["Technical Support", "Mentorship", "Skills Exchange", "Career Guidance"].map((skill) => (
+            {categories.map((category) => (
               <Card
-                key={skill}
+                key={category.name}
                 className="cursor-pointer hover-lift"
-                onClick={() => navigate(`/support?category=${encodeURIComponent(skill)}`)}
+                onClick={() => navigate(`/support?category=${encodeURIComponent(category.name)}`)}
               >
                 <CardContent className="p-4 text-center">
-                  <p className="font-medium">{skill}</p>
+                  <p className="font-medium">{category.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{category.count} requests</p>
                 </CardContent>
               </Card>
             ))}
