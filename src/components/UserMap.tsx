@@ -171,8 +171,8 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
             <div style="background: #f3f4f6; padding: 8px; border-radius: 6px; margin-bottom: 10px;">
               <p style="font-size: 12px; color: #374151; font-weight: 500;">Specialties:</p>
               <p style="font-size: 12px; color: #6b7280; margin-top: 4px;">${specialtiesText}${moreCount}</p>
-            </div>`}}]} />"}
-            <button 
+            </div>
+            <button
               id="contact-${user.id}" 
               style="
                 width: 100%;
