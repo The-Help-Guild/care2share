@@ -454,11 +454,7 @@ const Home = () => {
                 return (
                   <Card 
                     key={event.id}
-                    className={`hover-lift cursor-pointer ${
-                      isAnnouncement 
-                        ? "border-border bg-card" 
-                        : "border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5"
-                    }`}
+                    className="hover-lift cursor-pointer border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5"
                     onClick={() => navigate('/events')}
                   >
                     <CardHeader>
