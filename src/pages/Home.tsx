@@ -23,7 +23,7 @@ const Home = () => {
   const [supportRequests, setSupportRequests] = useState<any[]>([]);
   const [domains, setDomains] = useState<any[]>([]);
   const [categories, setCategories] = useState<Array<{ name: string; count: number }>>([]);
-  const [latestEvent, setLatestEvent] = useState<any>(null);
+  const [latestEvents, setLatestEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -222,16 +222,15 @@ const Home = () => {
       setCategories(sortedCategories);
     };
 
-    const loadLatestEvent = async () => {
+    const loadLatestEvents = async () => {
       const { data } = await supabase
         .from("events")
         .select("*")
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(2);
 
       if (data) {
-        setLatestEvent(data);
+        setLatestEvents(data);
       }
     };
 
@@ -240,7 +239,7 @@ const Home = () => {
     loadSupportRequests();
     loadDomains();
     loadCategories();
-    loadLatestEvent();
+    loadLatestEvents();
 
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -331,48 +330,55 @@ const Home = () => {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-10 animate-fade-in">
-        {latestEvent && (
+        {latestEvents.length > 0 && (
           <section>
-            <Card 
-              className="hover-lift cursor-pointer border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5"
-              onClick={() => navigate('/events')}
-            >
-              <CardHeader>
-                <div className="flex items-start gap-3">
-                  <div className={`p-3 rounded-lg ${latestEvent.type === "event" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent-foreground"}`}>
-                    {latestEvent.type === "event" ? <Calendar className="h-6 w-6" /> : <Megaphone className="h-6 w-6" />}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {latestEvent.type === "event" ? "Latest Event" : "Latest Announcement"}
-                      </Badge>
-                    </div>
-                    <CardTitle className="text-xl">{latestEvent.title}</CardTitle>
-                    {latestEvent.type === "event" && latestEvent.event_date && (
-                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {format(new Date(latestEvent.event_date), "PPp")}
-                        </span>
-                        {latestEvent.location && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            {latestEvent.location}
-                          </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {latestEvents.map((event) => (
+                <Card 
+                  key={event.id}
+                  className="hover-lift cursor-pointer border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5"
+                  onClick={() => navigate('/events')}
+                >
+                  <CardHeader>
+                    <div className="flex items-start gap-3">
+                      <div className={`p-3 rounded-lg ${event.type === "event" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent-foreground"}`}>
+                        {event.type === "event" ? <Calendar className="h-6 w-6" /> : <Megaphone className="h-6 w-6" />}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge variant="secondary" className="text-xs">
+                            {event.type === "event" ? "Event" : "Announcement"}
+                          </Badge>
+                        </div>
+                        <CardTitle className="text-lg">{event.title}</CardTitle>
+                        {event.type === "event" && event.event_date && (
+                          <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-4 w-4" />
+                              {format(new Date(event.event_date), "PPp")}
+                            </span>
+                            {event.location && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-4 w-4" />
+                                {event.location}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-2">{latestEvent.description}</p>
-                <Button variant="link" className="mt-2 p-0 h-auto">
-                  View all events →
-                </Button>
-              </CardContent>
-            </Card>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="text-center mt-4">
+              <Button variant="link" onClick={() => navigate('/events')}>
+                View all events & announcements →
+              </Button>
+            </div>
           </section>
         )}
 
