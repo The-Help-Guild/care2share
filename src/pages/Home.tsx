@@ -6,14 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, TrendingUp, Users, MessageSquare } from "lucide-react";
+import { Search, TrendingUp, Users, MessageSquare, Calendar, Megaphone, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { StartConversationButton } from "@/components/StartConversationButton";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import UserMap from "@/components/UserMap";
 
 const Home = () => {
@@ -23,6 +23,7 @@ const Home = () => {
   const [supportRequests, setSupportRequests] = useState<any[]>([]);
   const [domains, setDomains] = useState<any[]>([]);
   const [categories, setCategories] = useState<Array<{ name: string; count: number }>>([]);
+  const [latestEvent, setLatestEvent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -221,11 +222,25 @@ const Home = () => {
       setCategories(sortedCategories);
     };
 
+    const loadLatestEvent = async () => {
+      const { data } = await supabase
+        .from("events")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setLatestEvent(data);
+      }
+    };
+
     checkAuth();
     loadRecentProfiles();
     loadSupportRequests();
     loadDomains();
     loadCategories();
+    loadLatestEvent();
 
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -316,6 +331,51 @@ const Home = () => {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-10 animate-fade-in">
+        {latestEvent && (
+          <section>
+            <Card 
+              className="hover-lift cursor-pointer border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5"
+              onClick={() => navigate('/events')}
+            >
+              <CardHeader>
+                <div className="flex items-start gap-3">
+                  <div className={`p-3 rounded-lg ${latestEvent.type === "event" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent-foreground"}`}>
+                    {latestEvent.type === "event" ? <Calendar className="h-6 w-6" /> : <Megaphone className="h-6 w-6" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="secondary" className="text-xs">
+                        {latestEvent.type === "event" ? "Latest Event" : "Latest Announcement"}
+                      </Badge>
+                    </div>
+                    <CardTitle className="text-xl">{latestEvent.title}</CardTitle>
+                    {latestEvent.type === "event" && latestEvent.event_date && (
+                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          {format(new Date(latestEvent.event_date), "PPp")}
+                        </span>
+                        {latestEvent.location && (
+                          <span className="flex items-center gap-1">
+                            <MapPin className="h-4 w-4" />
+                            {latestEvent.location}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground line-clamp-2">{latestEvent.description}</p>
+                <Button variant="link" className="mt-2 p-0 h-auto">
+                  View all events →
+                </Button>
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
         <section>
           <UserMap users={recentProfiles} />
         </section>
