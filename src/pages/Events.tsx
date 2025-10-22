@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Calendar, MapPin, Megaphone, Plus, Trash2 } from "lucide-react";
@@ -15,6 +14,8 @@ import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { MentionTextarea } from "@/components/MentionTextarea";
+import { MentionText } from "@/components/MentionText";
 
 interface Event {
   id: string;
@@ -324,7 +325,12 @@ export default function Events() {
 
                 <div className="space-y-2">
                   <Label>Description</Label>
-                  <Textarea value={formData.description} onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))} placeholder="Event details" rows={4} />
+                  <MentionTextarea 
+                    value={formData.description} 
+                    onChange={(value) => setFormData(prev => ({ ...prev, description: value }))} 
+                    placeholder="Event details (use @ to mention users)" 
+                    rows={4} 
+                  />
                 </div>
 
                 {formData.type === "event" && (
@@ -415,7 +421,7 @@ export default function Events() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p className="text-sm whitespace-pre-wrap">{event.description}</p>
+                <MentionText text={event.description} className="text-sm whitespace-pre-wrap" />
 
                 {polls[event.id] && (
                   <div className="border-t pt-4">
