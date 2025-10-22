@@ -93,14 +93,30 @@ const Home = () => {
         });
       }
 
-      // 4) Merge back into profiles in the previous shape used by UI
+      // 4) Fetch expertise and hobby tags
+      const { data: expertise } = await supabase
+        .from("expertise_tags")
+        .select("profile_id, tag")
+        .in("profile_id", profileIds);
+      const { data: hobbies } = await supabase
+        .from("hobby_tags")
+        .select("profile_id, tag")
+        .in("profile_id", profileIds);
+
+      // 5) Merge back into profiles
       const enrichedProfiles = profilesData.map((profile) => {
         const pds = (profileDomains || []).filter((pd) => pd.profile_id === profile.id);
-        const mapped = pds
+        const mappedDomains = pds
           .map((pd) => domainsById[pd.domain_id as string])
           .filter(Boolean)
           .map((d) => ({ domains: { name: d.name } }));
-        return { ...profile, profile_domains: mapped };
+        const mappedExpertise = (expertise || [])
+          .filter((e) => e.profile_id === profile.id)
+          .map((e) => ({ tag: e.tag }));
+        const mappedHobbies = (hobbies || [])
+          .filter((h) => h.profile_id === profile.id)
+          .map((h) => ({ tag: h.tag }));
+        return { ...profile, profile_domains: mappedDomains, expertise_tags: mappedExpertise, hobby_tags: mappedHobbies };
       });
 
       setRecentProfiles(enrichedProfiles);
@@ -338,16 +354,30 @@ const Home = () => {
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="flex flex-wrap gap-2">
-                    {profile.profile_domains?.slice(0, 3).map((pd: any, i: number) => (
-                      <Badge key={i} variant="secondary" className="text-xs font-medium">
-                        {pd.domains.name}
-                      </Badge>
-                    ))}
-                    {profile.profile_domains?.length > 3 && (
-                      <Badge variant="outline" className="text-xs font-medium">
-                        +{profile.profile_domains.length - 3} more
-                      </Badge>
-                    )}
+                    {(() => {
+                      const specialties = Array.from(new Set([
+                        ...(profile.profile_domains?.map((pd: any) => pd.domains.name) || []),
+                        ...(profile.expertise_tags?.map((et: any) => et.tag) || []),
+                        ...(profile.hobby_tags?.map((ht: any) => ht.tag) || []),
+                      ]));
+                      return (
+                        <>
+                          {specialties.slice(0, 3).map((name: string, i: number) => (
+                            <Badge key={i} variant="secondary" className="text-xs font-medium">
+                              {name}
+                            </Badge>
+                          ))}
+                          {specialties.length > 3 && (
+                            <Badge variant="outline" className="text-xs font-medium">
+                              +{specialties.length - 3} more
+                            </Badge>
+                          )}
+                          {specialties.length === 0 && (
+                            <Badge variant="outline" className="text-xs font-medium">No specialties yet</Badge>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </CardContent>
               </Card>

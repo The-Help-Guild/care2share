@@ -16,6 +16,8 @@ interface UserLocation {
   longitude?: number | null;
   profile_photo_url?: string;
   profile_domains?: Array<{ domains: { name: string } }>;
+  expertise_tags?: Array<{ tag: string }>;
+  hobby_tags?: Array<{ tag: string }>;
 }
 
 interface UserMapProps {
@@ -152,8 +154,13 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
         el.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
         el.style.cursor = 'pointer';
 
-        const domains = user.profile_domains?.slice(0, 3).map(pd => pd.domains.name).join(', ') || 'No specialties listed';
-        const moreCount = user.profile_domains && user.profile_domains.length > 3 ? ` +${user.profile_domains.length - 3} more` : '';
+        const specialtiesArr = Array.from(new Set([
+          ...(user.profile_domains?.map(pd => pd.domains.name) || []),
+          ...(user.expertise_tags?.map(et => et.tag) || []),
+          ...(user.hobby_tags?.map(ht => ht.tag) || []),
+        ]));
+        const specialtiesText = specialtiesArr.slice(0, 3).join(', ') || 'No specialties listed';
+        const moreCount = specialtiesArr.length > 3 ? ` +${specialtiesArr.length - 3} more` : '';
         
         const popupContent = document.createElement('div');
         const locationDisplay = getLocationAddress(user.location);
@@ -163,8 +170,8 @@ const UserMap: React.FC<UserMapProps> = ({ users }) => {
             <p style="font-size: 13px; color: #666; margin-bottom: 8px;">📍 ${locationDisplay}</p>
             <div style="background: #f3f4f6; padding: 8px; border-radius: 6px; margin-bottom: 10px;">
               <p style="font-size: 12px; color: #374151; font-weight: 500;">Specialties:</p>
-              <p style="font-size: 12px; color: #6b7280; margin-top: 4px;">${domains}${moreCount}</p>
-            </div>
+              <p style="font-size: 12px; color: #6b7280; margin-top: 4px;">${specialtiesText}${moreCount}</p>
+            </div>`}}]} />"}
             <button 
               id="contact-${user.id}" 
               style="
