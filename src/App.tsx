@@ -18,6 +18,7 @@ import MyProfile from "./pages/MyProfile";
 import Messages from "./pages/Messages";
 import AdminPanel from "./pages/AdminPanel";
 import SupportRequests from "./pages/SupportRequests";
+import Events from "./pages/Events";
 import NotFound from "./pages/NotFound";
 import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/my-profile" element={<MyProfile />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/support" element={<SupportRequests />} />
+              <Route path="/events" element={<Events />} />
               <Route path="/admin" element={<AdminPanel />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
