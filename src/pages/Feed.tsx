@@ -359,7 +359,8 @@ const Feed = () => {
         youtube_url: editingPost.youtube_url || ""
       });
 
-      const { error } = await supabase
+      // Build update query - admins can edit any post
+      let query = supabase
         .from("posts")
         .update({
           title: validated.title,
@@ -368,8 +369,14 @@ const Feed = () => {
           photo_url: validated.photo_url || null,
           youtube_url: validated.youtube_url || null,
         })
-        .eq("id", editingPost.id)
-        .eq("user_id", currentUser.id);
+        .eq("id", editingPost.id);
+
+      // Regular users can only edit their own posts
+      if (!isAdmin) {
+        query = query.eq("user_id", currentUser.id);
+      }
+
+      const { error } = await query;
 
       if (error) throw error;
 
@@ -808,7 +815,7 @@ const Feed = () => {
                     <CardTitle className="text-lg mt-2">{post.title}</CardTitle>
                   </div>
                   <div className="flex items-center gap-1 ml-auto">
-                    {currentUser?.id === post.user_id && (
+                    {(currentUser?.id === post.user_id || isAdmin) && (
                       <Button 
                         variant="ghost" 
                         size="icon"

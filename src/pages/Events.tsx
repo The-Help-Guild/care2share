@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Calendar, MapPin, Megaphone, Plus, Trash2 } from "lucide-react";
+import { Calendar, MapPin, Megaphone, Plus, Trash2, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import BottomNav from "@/components/BottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -47,6 +47,8 @@ export default function Events() {
   const [polls, setPolls] = useState<Record<string, Poll>>({});
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [formData, setFormData] = useState({
     type: "event" as "event" | "announcement",
     title: "",
@@ -193,6 +195,70 @@ export default function Events() {
       console.error("Error creating event:", error);
       toast.error("Failed to create event");
     }
+  };
+
+  const handleEditEvent = async () => {
+    if (!editingEvent) return;
+
+    try {
+      const eventData: any = {
+        type: formData.type,
+        title: formData.title,
+        description: formData.description,
+      };
+
+      if (formData.type === "event") {
+        eventData.event_date = formData.event_date || null;
+        eventData.location = formData.location || null;
+      }
+
+      const { error } = await supabase
+        .from("events")
+        .update(eventData)
+        .eq("id", editingEvent.id);
+
+      if (error) throw error;
+
+      toast.success(`${formData.type === "event" ? "Event" : "Announcement"} updated successfully!`);
+      setEditDialogOpen(false);
+      setEditingEvent(null);
+      resetForm();
+      fetchEvents();
+    } catch (error) {
+      console.error("Error updating event:", error);
+      toast.error("Failed to update event");
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      const { error } = await supabase
+        .from("events")
+        .delete()
+        .eq("id", eventId);
+
+      if (error) throw error;
+
+      toast.success("Event deleted successfully");
+      fetchEvents();
+    } catch (error) {
+      console.error("Error deleting event:", error);
+      toast.error("Failed to delete event");
+    }
+  };
+
+  const openEditDialog = (event: Event) => {
+    setEditingEvent(event);
+    setFormData({
+      type: event.type as "event" | "announcement",
+      title: event.title,
+      description: event.description,
+      event_date: event.event_date ? new Date(event.event_date).toISOString().slice(0, 16) : "",
+      location: event.location || "",
+      poll_question: "",
+      poll_options: ["", ""]
+    });
+    setEditDialogOpen(true);
   };
 
   const handleVote = async (pollId: string, optionId: string, eventId: string) => {
@@ -382,6 +448,65 @@ export default function Events() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Edit Dialog */}
+        {isAdmin && (
+          <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit {formData.type === "event" ? "Event" : "Announcement"}</DialogTitle>
+                <DialogDescription>Update the event or announcement details</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <Select value={formData.type} onValueChange={(value: "event" | "announcement") => setFormData(prev => ({ ...prev, type: value }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="event">Event</SelectItem>
+                      <SelectItem value="announcement">Announcement</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input value={formData.title} onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))} placeholder="Event title" />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <MentionTextarea 
+                    value={formData.description} 
+                    onChange={(value) => setFormData(prev => ({ ...prev, description: value }))} 
+                    placeholder="Event details (use @ to mention users)" 
+                    rows={4} 
+                  />
+                </div>
+
+                {formData.type === "event" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Date & Time</Label>
+                      <Input type="datetime-local" value={formData.event_date} onChange={(e) => setFormData(prev => ({ ...prev, event_date: e.target.value }))} />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Location (optional)</Label>
+                      <Input value={formData.location} onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))} placeholder="Event location" />
+                    </div>
+                  </>
+                )}
+
+                <Button onClick={handleEditEvent} className="w-full" disabled={!formData.title || !formData.description}>
+                  Update {formData.type === "event" ? "Event" : "Announcement"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <div className="space-y-6">
@@ -418,6 +543,32 @@ export default function Events() {
                       )}
                     </CardDescription>
                   </div>
+                  {isAdmin && (
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditDialog(event);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("Are you sure you want to delete this event?")) {
+                            handleDeleteEvent(event.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
