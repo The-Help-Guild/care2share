@@ -15,6 +15,7 @@ import { NotificationCenter } from "@/components/NotificationCenter";
 import { StartConversationButton } from "@/components/StartConversationButton";
 import { formatDistanceToNow, format } from "date-fns";
 import UserMap from "@/components/UserMap";
+import { MentionText } from "@/components/MentionText";
 
 const Home = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -24,6 +25,7 @@ const Home = () => {
   const [domains, setDomains] = useState<any[]>([]);
   const [categories, setCategories] = useState<Array<{ name: string; count: number }>>([]);
   const [latestEvents, setLatestEvents] = useState<any[]>([]);
+  const [eventPolls, setEventPolls] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -231,6 +233,59 @@ const Home = () => {
 
       if (data) {
         setLatestEvents(data);
+        
+        // Load polls for these events
+        for (const event of data) {
+          await loadPollForEvent(event.id);
+        }
+      }
+    };
+
+    const loadPollForEvent = async (eventId: string) => {
+      try {
+        const { data: pollData, error: pollError } = await supabase
+          .from("event_polls")
+          .select("id, question")
+          .eq("event_id", eventId)
+          .maybeSingle();
+
+        if (pollError) throw pollError;
+        if (!pollData) return;
+
+        const { data: optionsData, error: optionsError } = await supabase
+          .from("poll_options")
+          .select("id, option_text")
+          .eq("poll_id", pollData.id);
+
+        if (optionsError) throw optionsError;
+
+        const { data: votesData, error: votesError } = await supabase
+          .from("poll_votes")
+          .select("option_id, user_id")
+          .eq("poll_id", pollData.id);
+
+        if (votesError) throw votesError;
+
+        const { data: { user } } = await supabase.auth.getUser();
+        const userVote = votesData?.find(v => v.user_id === user?.id)?.option_id;
+
+        const optionsWithVotes = (optionsData || []).map(opt => ({
+          ...opt,
+          votes: votesData?.filter(v => v.option_id === opt.id).length || 0
+        }));
+
+        setEventPolls(prev => ({
+          ...prev,
+          [eventId]: {
+            id: pollData.id,
+            event_id: eventId,
+            question: pollData.question,
+            options: optionsWithVotes,
+            userVote
+          }
+        }));
+      } catch (error) {
+        console.error("Error fetching poll:", error);
       }
     };
 
@@ -285,6 +340,64 @@ const Home = () => {
       .slice(0, 2);
   };
 
+  const handleVote = async (pollId: string, optionId: string, eventId: string) => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) {
+        toast.error("Please log in to vote");
+        return;
+      }
+
+      const currentVote = eventPolls[eventId]?.userVote;
+
+      if (currentVote) {
+        await supabase
+          .from("poll_votes")
+          .delete()
+          .eq("poll_id", pollId)
+          .eq("user_id", userData.user.id);
+      }
+
+      if (currentVote !== optionId) {
+        const { error } = await supabase
+          .from("poll_votes")
+          .insert({
+            poll_id: pollId,
+            option_id: optionId,
+            user_id: userData.user.id
+          });
+
+        if (error) throw error;
+      }
+
+      // Reload poll data
+      const { data: votesData } = await supabase
+        .from("poll_votes")
+        .select("option_id, user_id")
+        .eq("poll_id", pollId);
+
+      const poll = eventPolls[eventId];
+      if (poll) {
+        const updatedOptions = poll.options.map((opt: any) => ({
+          ...opt,
+          votes: votesData?.filter(v => v.option_id === opt.id).length || 0
+        }));
+
+        setEventPolls(prev => ({
+          ...prev,
+          [eventId]: {
+            ...poll,
+            options: updatedOptions,
+            userVote: currentVote !== optionId ? optionId : undefined
+          }
+        }));
+      }
+    } catch (error) {
+      console.error("Error voting:", error);
+      toast.error("Failed to vote");
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -333,46 +446,84 @@ const Home = () => {
         {latestEvents.length > 0 && (
           <section>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {latestEvents.map((event) => (
-                <Card 
-                  key={event.id}
-                  className="hover-lift cursor-pointer border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5"
-                  onClick={() => navigate('/events')}
-                >
-                  <CardHeader>
-                    <div className="flex items-start gap-3">
-                      <div className={`p-3 rounded-lg ${event.type === "event" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent-foreground"}`}>
-                        {event.type === "event" ? <Calendar className="h-6 w-6" /> : <Megaphone className="h-6 w-6" />}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge variant="secondary" className="text-xs">
-                            {event.type === "event" ? "Event" : "Announcement"}
-                          </Badge>
+              {latestEvents.map((event) => {
+                const poll = eventPolls[event.id];
+                const totalVotes = poll ? poll.options.reduce((sum: number, opt: any) => sum + opt.votes, 0) : 0;
+
+                return (
+                  <Card 
+                    key={event.id}
+                    className="hover-lift cursor-pointer border-primary/20 bg-gradient-to-br from-primary/5 to-accent/5"
+                    onClick={() => navigate('/events')}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start gap-3">
+                        <div className={`p-3 rounded-lg ${event.type === "event" ? "bg-primary/10 text-primary" : "bg-accent/10 text-accent-foreground"}`}>
+                          {event.type === "event" ? <Calendar className="h-6 w-6" /> : <Megaphone className="h-6 w-6" />}
                         </div>
-                        <CardTitle className="text-lg">{event.title}</CardTitle>
-                        {event.type === "event" && event.event_date && (
-                          <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              {format(new Date(event.event_date), "PPp")}
-                            </span>
-                            {event.location && (
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-4 w-4" />
-                                {event.location}
-                              </span>
-                            )}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="secondary" className="text-xs">
+                              {event.type === "event" ? "Event" : "Announcement"}
+                            </Badge>
                           </div>
-                        )}
+                          <CardTitle className="text-lg">{event.title}</CardTitle>
+                          {event.type === "event" && event.event_date && (
+                            <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-4 w-4" />
+                                {format(new Date(event.event_date), "PPp")}
+                              </span>
+                              {event.location && (
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="h-4 w-4" />
+                                  {event.location}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <MentionText text={event.description} className="text-sm text-muted-foreground line-clamp-3" />
+
+                      {poll && (
+                        <div className="border-t pt-4" onClick={(e) => e.stopPropagation()}>
+                          <h4 className="font-semibold mb-3 text-sm">{poll.question}</h4>
+                          <div className="space-y-2">
+                            {poll.options.map((option: any) => {
+                              const percentage = totalVotes > 0 ? (option.votes / totalVotes) * 100 : 0;
+                              const isSelected = poll.userVote === option.id;
+
+                              return (
+                                <button
+                                  key={option.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleVote(poll.id, option.id, event.id);
+                                  }}
+                                  className={`w-full text-left p-2 rounded-lg border transition-colors relative overflow-hidden ${
+                                    isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                                  }`}
+                                >
+                                  <div className="absolute inset-0 bg-primary/10" style={{ width: `${percentage}%` }} />
+                                  <div className="relative flex items-center justify-between text-sm">
+                                    <span className="font-medium">{option.option_text}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {option.votes} ({percentage.toFixed(0)}%)
+                                    </span>
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </section>
         )}

@@ -72,7 +72,7 @@ export const MentionText = ({ text, className = "" }: MentionTextProps) => {
         parts.push(
           <span
             key={`mention-${key++}`}
-            className="text-primary font-medium cursor-pointer hover:underline"
+            className="text-foreground font-semibold cursor-pointer hover:underline"
             onClick={(e) => {
               e.stopPropagation();
               navigate(`/profile/${userId}`);
@@ -83,7 +83,7 @@ export const MentionText = ({ text, className = "" }: MentionTextProps) => {
         );
       } else {
         parts.push(
-          <span key={`mention-${key++}`} className="text-muted-foreground">
+          <span key={`mention-${key++}`} className="text-foreground font-semibold">
             @{mentionName}
           </span>
         );
