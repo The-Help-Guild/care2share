@@ -374,11 +374,6 @@ const Home = () => {
                 </Card>
               ))}
             </div>
-            <div className="text-center mt-4">
-              <Button variant="link" onClick={() => navigate('/events')}>
-                View all events & announcements →
-              </Button>
-            </div>
           </section>
         )}
 
