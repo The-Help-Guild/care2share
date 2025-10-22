@@ -98,21 +98,36 @@ const Search = () => {
       const locationLower = location.toLowerCase();
 
       // Search profiles
+      const profileSelectBase = `
+        id,
+        full_name,
+        bio,
+        location,
+        profile_photo_url,
+        profile_domains(
+          domain_id,
+          domains(id, name)
+        ),
+        expertise_tags(tag),
+        hobby_tags(tag)
+      `;
+      const profileSelectWithInner = `
+        id,
+        full_name,
+        bio,
+        location,
+        profile_photo_url,
+        profile_domains!inner(
+          domain_id,
+          domains(id, name)
+        ),
+        expertise_tags(tag),
+        hobby_tags(tag)
+      `;
+
       let profileQuery = supabase
         .from("profiles")
-        .select(`
-          id,
-          full_name,
-          bio,
-          location,
-          profile_photo_url,
-          profile_domains!inner(
-            domain_id,
-            domains(id, name)
-          ),
-          expertise_tags(tag),
-          hobby_tags(tag)
-        `);
+        .select(domainFilters.length > 0 ? profileSelectWithInner : profileSelectBase);
 
       if (domainFilters.length > 0) {
         profileQuery = profileQuery.in("profile_domains.domain_id", domainFilters);
