@@ -461,23 +461,27 @@ const Home = () => {
                     }`}
                     onClick={() => navigate('/events')}
                   >
-                    <CardHeader className={isAnnouncement ? "space-y-4" : ""}>
+                    <CardHeader>
                       {isAnnouncement ? (
-                        <>
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-accent/10 text-accent-foreground">
-                              <Megaphone className="h-5 w-5" />
+                        <div className="flex items-start gap-3">
+                          <div className="p-3 rounded-lg bg-accent/10 text-accent-foreground">
+                            <Megaphone className="h-6 w-6" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="secondary" className="text-xs">
+                                Announcement
+                              </Badge>
                             </div>
-                            <Badge variant="secondary" className="text-xs">
-                              Announcement
-                            </Badge>
+                            <CardTitle className="text-lg">{event.title}</CardTitle>
+                            <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-4 w-4" />
+                                {format(new Date(event.created_at), "PPp")}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <CardTitle className="text-xl flex items-center gap-2">
-                              🔔 {event.title}
-                            </CardTitle>
-                          </div>
-                        </>
+                        </div>
                       ) : (
                         <div className="flex items-start gap-3">
                           <div className="p-3 rounded-lg bg-primary/10 text-primary">
