@@ -9,7 +9,7 @@ import shareImg from "@/assets/onboarding-share-optimized.jpg";
 import shareImgWebp from "@/assets/onboarding-share-optimized.webp";
 import findImg from "@/assets/onboarding-find-optimized.jpg";
 import findImgWebp from "@/assets/onboarding-find-optimized.webp";
-import logo from "@/assets/logo-optimized.png";
+import logo from "/Care2Share.png";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Footer } from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";

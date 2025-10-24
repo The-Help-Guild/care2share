@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Mail, Lock, User, Loader2 } from "lucide-react";
-import logo from "@/assets/logo-optimized.png";
+import logo from "/Care2Share.png";
 import { z } from "zod";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Checkbox } from "@/components/ui/checkbox";
