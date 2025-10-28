@@ -25,7 +25,7 @@ const Header = ({ title, children, className = "" }: HeaderProps) => {
               <img 
                 src="/Care2Share.png" 
                 alt="Care2Share" 
-                className="h-10 w-auto object-contain"
+                className="h-16 md:h-20 w-auto object-contain"
               />
             </button>
             {title && (
