@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import UserMenu from "@/components/UserMenu";
 import { NotificationCenter } from "@/components/NotificationCenter";
-import logo from "@/assets/logo-optimized.png";
 
 interface HeaderProps {
   title?: React.ReactNode;
@@ -24,7 +23,7 @@ const Header = ({ title, children, className = "" }: HeaderProps) => {
               aria-label="Go to home"
             >
               <img 
-                src={logo} 
+                src="/Care2Share.png" 
                 alt="Care2Share" 
                 className="h-10 w-auto object-contain"
               />
