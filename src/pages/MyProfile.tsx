@@ -7,9 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, LogOut, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import UserMenu from "@/components/UserMenu";
-import { NotificationCenter } from "@/components/NotificationCenter";
+import Header from "@/components/Header";
 import { ProfileCompleteness } from "@/components/ProfileCompleteness";
 import {
   AlertDialog,
@@ -136,16 +134,7 @@ const MyProfile = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="bg-card border-b">
-        <div className="max-w-4xl mx-auto p-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-primary">My Profile</h1>
-          <div className="flex items-center gap-2">
-            <NotificationCenter />
-            <ThemeToggle />
-            <UserMenu />
-          </div>
-        </div>
-      </header>
+      <Header title="My Profile" />
 
       <main className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 animate-fade-in">
         {profile && (

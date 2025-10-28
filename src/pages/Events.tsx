@@ -11,9 +11,7 @@ import { toast } from "sonner";
 import { Calendar, MapPin, Megaphone, Plus, Trash2, Pencil } from "lucide-react";
 import { format } from "date-fns";
 import BottomNav from "@/components/BottomNav";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import UserMenu from "@/components/UserMenu";
-import { NotificationCenter } from "@/components/NotificationCenter";
+import Header from "@/components/Header";
 import { MentionTextarea } from "@/components/MentionTextarea";
 import { MentionText } from "@/components/MentionText";
 
@@ -339,18 +337,7 @@ export default function Events() {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="bg-card border-b border-border sticky top-0 z-10 shadow-md">
-        <div className="max-w-4xl mx-auto px-4 py-5">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold tracking-tight">Events & Announcements</h1>
-            <div className="flex items-center gap-2">
-              <NotificationCenter />
-              <ThemeToggle />
-              <UserMenu />
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header title="Events & Announcements" />
 
       <div className="container py-8 max-w-4xl">
         <div className="flex items-center justify-between mb-8">

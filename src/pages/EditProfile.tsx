@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import Header from "@/components/Header";
 import imageCompression from "browser-image-compression";
 import { EmojiPickerComponent } from "@/components/EmojiPicker";
 import { MapboxLocationPicker } from "@/components/MapboxLocationPicker";
@@ -353,19 +353,18 @@ const EditProfile = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="bg-card border-b sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto p-4 flex items-center gap-3">
+      <Header title="Edit Profile">
+        <div className="flex items-center gap-3 -mt-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
+            className="shrink-0"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold text-primary flex-1">Edit Profile</h1>
-          <ThemeToggle />
         </div>
-      </header>
+      </Header>
 
       <main className="max-w-4xl mx-auto p-4 space-y-6">
         <Card>

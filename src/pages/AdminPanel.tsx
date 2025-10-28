@@ -51,7 +51,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import Header from "@/components/Header";
 
 interface User {
   id: string;
@@ -534,20 +534,23 @@ const AdminPanel = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-card border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto p-4 flex items-center gap-3">
+      <Header title={
+        <div className="flex items-center gap-2">
+          <Shield className="h-6 w-6 text-primary" />
+          <span>Admin Panel</span>
+        </div>
+      }>
+        <div className="flex items-center gap-3 -mt-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/home")}
+            className="shrink-0"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <Shield className="h-6 w-6 text-primary" />
-          <h1 className="text-xl font-bold text-primary flex-1">Admin Panel</h1>
-          <ThemeToggle />
         </div>
-      </header>
+      </Header>
 
       <main className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         {/* Stats Cards */}

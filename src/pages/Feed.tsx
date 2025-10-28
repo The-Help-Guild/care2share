@@ -12,9 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MessageSquare, Plus, Trash2, Pencil, Heart, Send, Upload, X, Youtube } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import BottomNav from "@/components/BottomNav";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import UserMenu from "@/components/UserMenu";
-import { NotificationCenter } from "@/components/NotificationCenter";
+import Header from "@/components/Header";
 import { formatDistanceToNow } from "date-fns";
 import { z } from "zod";
 import DOMPurify from "dompurify";
@@ -609,40 +607,30 @@ const Feed = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="bg-card border-b sticky top-0 z-10 shadow-soft">
-        <div className="max-w-4xl mx-auto p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-primary">Community Feed</h1>
-            <div className="flex items-center gap-2">
-              <NotificationCenter />
-              <ThemeToggle />
-              <UserMenu />
-            </div>
-          </div>
+      <Header title="Community Feed" className="shadow-soft">
+        <div className="flex gap-2">
+          <Select value={selectedDomain || "all"} onValueChange={(value) => setSelectedDomain(value === "all" ? "" : value)}>
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="All Domains" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Domains</SelectItem>
+              {domains.map((domain) => (
+                <SelectItem key={domain.id} value={domain.name}>
+                  {domain.icon && <span className="mr-2">{domain.icon}</span>}
+                  {domain.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <div className="flex gap-2">
-            <Select value={selectedDomain || "all"} onValueChange={(value) => setSelectedDomain(value === "all" ? "" : value)}>
-              <SelectTrigger className="flex-1">
-                <SelectValue placeholder="All Domains" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Domains</SelectItem>
-                {domains.map((domain) => (
-                  <SelectItem key={domain.id} value={domain.name}>
-                    {domain.icon && <span className="mr-2">{domain.icon}</span>}
-                    {domain.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Post
-                </Button>
-              </DialogTrigger>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Post
+              </Button>
+            </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Create New Post</DialogTitle>
@@ -765,8 +753,7 @@ const Feed = () => {
               </DialogContent>
             </Dialog>
           </div>
-        </div>
-      </header>
+      </Header>
 
       <main className="max-w-4xl mx-auto p-4 space-y-4 animate-fade-in">
         {posts.length === 0 ? (

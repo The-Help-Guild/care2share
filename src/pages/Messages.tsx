@@ -11,9 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageCircle, Send, ArrowLeft, Loader2, Search as SearchIcon, AtSign, Mail, Reply, X } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import UserMenu from "@/components/UserMenu";
-import { NotificationCenter } from "@/components/NotificationCenter";
+import Header from "@/components/Header";
 import { MentionInput } from "@/components/MentionInput";
 import { extractMentions, createMentionNotification, saveMentions, createNewMessageNotification } from "@/lib/messageHelpers";
 import { z } from "zod";
@@ -637,17 +635,8 @@ const Messages = () => {
       <div className="md:hidden">
         {!selectedConversation ? (
           <>
-            <header className="bg-card border-b">
-              <div className="max-w-4xl mx-auto p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h1 className="text-2xl font-bold text-primary">Messages</h1>
-                  <div className="flex items-center gap-2">
-                    <NotificationCenter />
-                    <ThemeToggle />
-                    <UserMenu />
-                  </div>
-                </div>
-                <Tabs value={messageFilter} onValueChange={(v) => setMessageFilter(v as any)} className="w-full mb-3">
+            <Header title="Messages">
+              <Tabs value={messageFilter} onValueChange={(v) => setMessageFilter(v as any)} className="w-full mb-3">
                   <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="all" className="flex items-center gap-2">
                       <MessageCircle className="h-4 w-4" />
@@ -677,8 +666,7 @@ const Messages = () => {
                     className="pl-10"
                   />
                 </div>
-              </div>
-            </header>
+            </Header>
 
             <main className="max-w-4xl mx-auto p-4">
               {conversations.length === 0 ? (
@@ -928,15 +916,7 @@ const Messages = () => {
 
       {/* Desktop view */}
       <div className="hidden md:block">
-        <header className="bg-card border-b">
-          <div className="max-w-7xl mx-auto p-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-primary">Messages</h1>
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-              <UserMenu />
-            </div>
-          </div>
-        </header>
+        <Header title="Messages" />
 
         <main className="max-w-7xl mx-auto p-4">
           <div className="grid grid-cols-3 gap-4 h-[calc(100vh-140px)]">

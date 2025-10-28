@@ -25,8 +25,7 @@ import {
 import { MessageSquare, Plus, Search, Clock, CheckCircle, AlertCircle, Filter, Send, Loader2, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { NotificationCenter } from "@/components/NotificationCenter";
+import Header from "@/components/Header";
 import { StartConversationButton } from "@/components/StartConversationButton";
 import { z } from "zod";
 import { CATEGORIES } from "@/lib/constants";
@@ -509,17 +508,8 @@ const SupportRequests = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="bg-card border-b sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto p-4">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-primary">Support Requests</h1>
-            <div className="flex items-center gap-2">
-              <NotificationCenter />
-              <ThemeToggle />
-            </div>
-          </div>
-          
-          <div className="flex gap-2 mb-3">
+      <Header title="Support Requests">
+        <div className="flex gap-2 mb-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -655,8 +645,7 @@ const SupportRequests = () => {
               </DialogContent>
             </Dialog>
           </div>
-        </div>
-      </header>
+      </Header>
 
       <main className="max-w-4xl mx-auto p-4">
         {filteredRequests.length === 0 ? (

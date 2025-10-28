@@ -14,9 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Search as SearchIcon, Filter, Loader2, Users, MessageSquare, TrendingUp } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import UserMenu from "@/components/UserMenu";
-import { NotificationCenter } from "@/components/NotificationCenter";
+import Header from "@/components/Header";
 import { StartConversationButton } from "@/components/StartConversationButton";
 import { CATEGORIES } from "@/lib/constants";
 import { getLocationAddress } from "@/lib/locationHelpers";
@@ -349,20 +347,8 @@ const Search = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="bg-card border-b sticky top-0 z-10 shadow-soft">
-        <div className="max-w-6xl mx-auto p-3 sm:p-4">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <h1 className="text-lg sm:text-2xl font-bold text-primary">
-              Search Community
-            </h1>
-            <div className="flex items-center gap-1 sm:gap-2">
-              <NotificationCenter />
-              <ThemeToggle />
-              <UserMenu />
-            </div>
-          </div>
-          
-          <div className="flex gap-2">
+      <Header title="Search Community" className="shadow-soft">
+        <div className="flex gap-2">
             <div className="flex-1 relative">
               <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
               <Input
@@ -480,8 +466,7 @@ const Search = () => {
               ))}
             </div>
           )}
-        </div>
-      </header>
+      </Header>
 
       <main className="max-w-6xl mx-auto p-3 sm:p-4">
         {loading ? (

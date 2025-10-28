@@ -9,9 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Search, TrendingUp, Users, MessageSquare, Calendar, Megaphone, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import UserMenu from "@/components/UserMenu";
-import { NotificationCenter } from "@/components/NotificationCenter";
+import Header from "@/components/Header";
 import { StartConversationButton } from "@/components/StartConversationButton";
 import { formatDistanceToNow, format } from "date-fns";
 import UserMap from "@/components/UserMap";
@@ -411,36 +409,23 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="bg-card border-b border-border sticky top-0 z-10 shadow-md">
-        <div className="max-w-6xl mx-auto px-4 py-5">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold tracking-tight">
-              Welcome, {currentUser?.profile?.full_name?.split(" ")[0] || "Friend"}!
-            </h1>
-            <div className="flex items-center gap-2">
-              <NotificationCenter />
-              <ThemeToggle />
-              <UserMenu />
-            </div>
+      <Header title={`Welcome, ${currentUser?.profile?.full_name?.split(" ")[0] || "Friend"}!`}>
+        <div className="flex gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyPress={(e) => e.key === "Enter" && handleSearch()}
+              placeholder="What do you need help with today?"
+              className="pl-11 h-12 text-sm"
+            />
           </div>
-          
-          <div className="flex gap-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && handleSearch()}
-                placeholder="What do you need help with today?"
-                className="pl-11 h-12 text-sm"
-              />
-            </div>
-            <Button onClick={handleSearch} size="lg" className="px-6 md:px-8 shrink-0 h-12">
-              Search
-            </Button>
-          </div>
+          <Button onClick={handleSearch} size="lg" className="px-6 md:px-8 shrink-0 h-12">
+            Search
+          </Button>
         </div>
-      </header>
+      </Header>
 
       <main className="max-w-6xl mx-auto px-4 py-8 space-y-10 animate-fade-in">
         {latestEvents.length > 0 && (

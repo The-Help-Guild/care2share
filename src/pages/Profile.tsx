@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Mail, Download, Loader2, MoreVertical } from "lucide-react";
 import { toast } from "sonner";
 import BottomNav from "@/components/BottomNav";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import Header from "@/components/Header";
 import { BlockReportMenu } from "@/components/BlockReportMenu";
 import { getLocationAddress } from "@/lib/locationHelpers";
 
@@ -176,20 +176,20 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <header className="bg-card border-b sticky top-0 z-10 shadow-soft">
-        <div className="max-w-4xl mx-auto p-4 flex items-center gap-4">
+      <Header title="Profile" className="shadow-soft">
+        <div className="flex items-center gap-4 -mt-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
+            className="shrink-0"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold text-primary flex-1">Profile</h1>
+          <div className="flex-1"></div>
           {!isOwnProfile && <BlockReportMenu userId={id!} />}
-          <ThemeToggle />
         </div>
-      </header>
+      </Header>
 
       <main className="max-w-4xl mx-auto p-4 md:p-6 space-y-6 animate-fade-in">
         <Card>
